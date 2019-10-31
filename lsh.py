@@ -56,18 +56,19 @@ def generate_fingerprint(vocabulary):
     # return fingerprint
 
 
-def permutate(fingerprint):
+def permutate(fingerprint, shuffle_seed):
     # import ipdb; ipdb.set_trace()
     shuffled_list = copy(fingerprint)
+    np.random.seed(seed=shuffle_seed)
     np.random.shuffle(shuffled_list)
     return shuffled_list
 
 
-def apply_permutations(fingerprint, number_of_permutations=2):
+def generate_permutations(fingerprint, number_of_permutations=2):
     # TODO: Improve it! Looks poor
     permutations = [
-        permutate(fingerprint)
-        for i in range(number_of_permutations)
+        permutate(fingerprint, i)
+        for i in range(number_of_permutations + 1)
     ]
     return permutations
 
@@ -88,15 +89,8 @@ def main():
     documents = [d1, d2, d3, d4]
     td_matrix = tokenize(documents, vocabulary)
     print(td_matrix)
+    print(vocabulary)
 
-    fingerprint = generate_fingerprint(vocabulary)
-    permutations = apply_permutations(fingerprint, number_of_permutations=len(documents))
-    representative_terms = [
-        selection_function(1, vocabulary, permutation)
-        for permutation in permutations
-    ]
-    print(representative_terms)
-    
 
     # exit()
 
