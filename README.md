@@ -9,9 +9,12 @@ Retrieval stage](https://www.sciencedirect.com/science/article/abs/pii/S09507051
 ## Etapas
 
 1. Tokenização
-    Gerar uma matriz na qual as linhas são os documentos e as colunas são os termos.
-    Nas células, é informada a frequência que dado termo aparece em cada documento.
+    - Cada documento é parseado como um set de termos
+    - Gerar uma matriz (binária?) na qual cada coluna corresponde a um subset e cada 
+    linha corresponde a um termo do vocabulário.
 2. Geração de fingerprint
-3. Sermutação de feature
+    - Mapeia cada termo para um inteiro não-negativo, o que gera a sequência L
+3. Permutação de feature
+    - Permutar a sequência L (randomicamente reordenar L)
 4. Seleção de aplicação de função
 5. Avaliação da similaridade
