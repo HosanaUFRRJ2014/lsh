@@ -6,11 +6,17 @@ from copy import copy
 import numpy as np
 
 d1 = "Hosana Gomes"
-d2 = "python é bom 2"
+d2 = "python é bom 1"
 d3 = "Estou com sono"
 d4 = "Vivo com bastante fome"
 vocabulary = {}
 
+
+SELECTION_FUNCTIONS = [
+    min,
+    max
+]
+NUMBER_OF_SELECTION_FUNCTIONS = len(SELECTION_FUNCTIONS)
 
 def vocab_index(term, v):
     if term in v.keys():
