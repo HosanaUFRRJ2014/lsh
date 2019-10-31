@@ -68,16 +68,43 @@ def generate_permutations(fingerprint, number_of_permutations=2):
     return permutations
 
 
-def selection_function(function_index, v, permutation):
-    # FIXME: A função de seleção é aplicada sobre um documento, não sobre um dict inteiro
-    keys_array = np.array(list(v.keys()))
-    functions = {
-        1: keys_array[permutation[0] - 1]  # First minimal value
-    }
-    return functions[function_index]
+def generate_inverted_index(documents, vocabulary):
+    inverted = [] # np.array([])
+    test_matrix = []
+    for d_index, document in enumerate(documents):
+        terms = document.split(" ")
+        fingerprint = np.array([
+            vocabulary.get(term)
+            for term in terms
+        # Outra forma de recuperar a fingerprint: pegar os índices da td_matrix
+        ])
+
+        permutations = generate_permutations(
+            fingerprint, number_of_permutations=len(terms)
+        )
+
+        # TODO: Optimize it! Try to no use enumerate (looks like expensive)
+        line = np.zeros([len(permutations) * len(SELECTION_FUNCTIONS)])
+        size = len(permutations) * len(SELECTION_FUNCTIONS)
+        test_line = ['' for i in range(size)]
+        for i, permutation in enumerate(permutations, start=0): # Start in 1?
+            for j, function in enumerate(SELECTION_FUNCTIONS):
+                index = i * NUMBER_OF_SELECTION_FUNCTIONS + j
+                line[index] = SELECTION_FUNCTIONS[j](permutation)
+                func_name = 'min' if j == 0 else 'max'
+                test_line[index] = '{}(p{}(d{}))'.format(func_name, i, d_index)
+        
+        # inverted = np.append(inverted, [line])
+        inverted.append(line)
+        test_matrix.append(test_line)
+
+    print('Matriz de teste:')
+    for l in test_matrix:
+        print(l)
+    
+    return inverted
 
 
-def generate_inverted_index(documents, permutations)
 
 
 def main():
@@ -88,8 +115,10 @@ def main():
     print(vocabulary)
 
 
-    # exit()
+    inverted_index = generate_inverted_index(documents, vocabulary)
 
+    for i in inverted_index:
+        print(i)
 
 if __name__ == '__main__':
     main()
