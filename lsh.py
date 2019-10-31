@@ -9,7 +9,6 @@ d1 = "Hosana Gomes"
 d2 = "python é bom 1"
 d3 = "Estou com sono"
 d4 = "Vivo com bastante fome"
-vocabulary = {}
 
 
 SELECTION_FUNCTIONS = [
@@ -37,7 +36,7 @@ def tokenize(documents, v):
     td_matrix = np.zeros([len(v), len(documents)])
     # print(td_matrix.shape)
     for i in range(len(documents)):
-        td_matrix[np.array(td_matrix_temp[i])-1, i] = 1
+        td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
 
         # print(documents[i])
         # print(td_matrix)
@@ -48,12 +47,8 @@ def tokenize(documents, v):
     return td_matrix
 
 
-def generate_fingerprint(vocabulary):
+def get_fingerprint(vocabulary):
     return np.array(list(vocabulary.values()))
-    # fingerprint = [
-    #     len(v) for v in vocabulary
-    #]
-    # return fingerprint
 
 
 def permutate(fingerprint, shuffle_seed):
@@ -87,6 +82,7 @@ def generate_inverted_index(documents, permutations)
 
 def main():
     documents = [d1, d2, d3, d4]
+    vocabulary = {}
     td_matrix = tokenize(documents, vocabulary)
     print(td_matrix)
     print(vocabulary)
