@@ -1,21 +1,31 @@
 # -*-coding:utf8;-*-
 # qpy:3
 # qpy:console
-import random
+from random import sample, randint
 from copy import copy
 import numpy as np
+from pprint import pprint
+from scipy.sparse import lil_matrix
 
 d1 = "Hosana Gomes"
 d2 = "python é bom 1"
 d3 = "Estou com sono"
-d4 = "Vivo com bastante fome"
+d4 = "Vivo com bastante fome Hosana"
 
 
 SELECTION_FUNCTIONS = [
     min,
     max
 ]
-NUMBER_OF_SELECTION_FUNCTIONS = len(SELECTION_FUNCTIONS)
+SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
+
+
+def _get_index(permutation_number, selecion_function_code=0):
+    '''
+    Calculate index of inverted index matrix.
+    '''
+    return permutation_number * (SELECTION_FUNCTION_COUNT) + selecion_function_code
+
 
 def vocab_index(term, v):
     if term in v.keys():
@@ -51,60 +61,61 @@ def get_fingerprint(vocabulary):
     return np.array(list(vocabulary.values()))
 
 
-def permutate(fingerprint, shuffle_seed):
-    # import ipdb; ipdb.set_trace()
-    shuffled_list = copy(fingerprint)
+def permutate(to_permute, shuffle_seed, fingerprints):
+    shuffled_list = copy(fingerprints)
     np.random.seed(seed=shuffle_seed)
     np.random.shuffle(shuffled_list)
-    return shuffled_list
+    resultant_fingerprints = to_permute * shuffled_list
+
+    return resultant_fingerprints
 
 
-def generate_permutations(fingerprint, number_of_permutations=2):
+def generate_permutations(to_permute, number_of_permutations, fingerprints):
     # TODO: Improve it! Looks poor
     permutations = [
-        permutate(fingerprint, i)
+        permutate(to_permute, i, fingerprints)
         for i in range(number_of_permutations + 1)
     ]
     return permutations
 
 
-def generate_inverted_index(documents, vocabulary):
-    inverted = [] # np.array([])
-    test_matrix = []
-    for d_index, document in enumerate(documents):
-        terms = document.split(" ")
-        fingerprint = np.array([
-            vocabulary.get(term)
-            for term in terms
-        # Outra forma de recuperar a fingerprint: pegar os índices da td_matrix
-        ])
+def generate_inverted_index(
+    documents, td_matrix, permutation_count
+):
+    matrix_m = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
+    matrix_n = len(documents)
+    inverted_index = lil_matrix(
+        (matrix_m, matrix_n),
+        dtype=np.ndarray
+    )
 
-        permutations = generate_permutations(
-            fingerprint, number_of_permutations=len(terms)
-        )
+    fingerprints = np.array(range(1, td_matrix.shape[0] + 1))
+    for j in range(matrix_n):
+        # dj é um vetor bidimensional aleatório
+        # (para representar uma música que já extraímos o mínimo e o máximo).
+        dj = []
+        for i in range(permutation_count):
+            dj_permutation = permutate(
+                to_permute=td_matrix[:, j],
+                shuffle_seed=permutation_count,
+                fingerprints=fingerprints
+            )
+            print(dj_permutation)
+            for l in range(SELECTION_FUNCTION_COUNT):
+                first_index = _get_index(
+                    permutation_number=i,
+                    selecion_function_code=l
+                )
+                second_index = SELECTION_FUNCTIONS[l](dj_permutation)
+                if inverted_index[first_index][0].size == 0:
+                    pass
+                    # inverted_index[first_index][0] = np.array([j])
+                else:
+                    inverted_index[first_index][second_index].add(j)
 
-        # TODO: Optimize it! Try to no use enumerate (looks like expensive)
-        line = np.zeros([len(permutations) * len(SELECTION_FUNCTIONS)])
-        size = len(permutations) * len(SELECTION_FUNCTIONS)
-        test_line = ['' for i in range(size)]
-        for i, permutation in enumerate(permutations, start=0): # Start in 1?
-            for j, function in enumerate(SELECTION_FUNCTIONS):
-                index = i * NUMBER_OF_SELECTION_FUNCTIONS + j
-                line[index] = SELECTION_FUNCTIONS[j](permutation)
-                func_name = 'min' if j == 0 else 'max'
-                test_line[index] = '{}(p{}(d{}))'.format(func_name, i, d_index)
-        
-        # inverted = np.append(inverted, [line])
-        inverted.append(line)
-        test_matrix.append(test_line)
+                print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l], _get_index(i, l),SELECTION_FUNCTIONS[l](dj_permutation),j))
 
-    print('Matriz de teste:')
-    for l in test_matrix:
-        print(l)
-    
-    return inverted
-
-
+    return inverted_index
 
 
 def main():
@@ -114,11 +125,13 @@ def main():
     print(td_matrix)
     print(vocabulary)
 
-
-    inverted_index = generate_inverted_index(documents, vocabulary)
+    inverted_index = generate_inverted_index(
+        documents, td_matrix, 4
+    )
 
     for i in inverted_index:
         print(i)
+
 
 if __name__ == '__main__':
     main()
