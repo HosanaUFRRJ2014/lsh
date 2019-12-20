@@ -83,14 +83,15 @@ def generate_permutations(to_permute, number_of_permutations, fingerprints):
 def generate_inverted_index(
     documents, td_matrix, permutation_count
 ):
-    matrix_m = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    matrix_n = td_matrix.shape[0] + 1
+    # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
+    num_lines = permutation_count * SELECTION_FUNCTION_COUNT  # + SELECTION_FUNCTION_COUNT
+    num_columns = td_matrix.shape[0] #+ 1
     inverted_index = np.zeros(
-        (matrix_m, matrix_n),
+        (num_lines, num_columns),
         dtype=np.ndarray
     )
 
-    fingerprints = np.array(range(1, matrix_n))
+    fingerprints = np.array(range(1, num_columns+1))
     for j in range(td_matrix.shape[1]):
         for i in range(permutation_count):
             dj_permutation = permutate(
@@ -104,15 +105,16 @@ def generate_inverted_index(
                     selecion_function_code=l
                 )
                 X = np.nonzero(dj_permutation)
-                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))
-                print("(%d, %d) on (%d, %d)"%(first_index, second_index, matrix_m, matrix_n),dj_permutation[X])
-                try:
-                    inverted_index[first_index][second_index][0]==0
-                    inverted_index[first_index][second_index] = np.append(inverted_index[first_index][second_index], [j+1])
-                except:
-                    inverted_index[first_index][second_index] = np.array([j+1])
-                print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l], first_index,second_index,j+1))
-                print("@@",inverted_index,"@@")
+                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))-1
+                print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[X])
+                if isinstance(inverted_index[first_index][second_index], np.ndarray):
+                    inverted_index[first_index][second_index] = np.append(
+                        inverted_index[first_index][second_index],
+                        [j + 1]
+                    )
+                else:
+                    inverted_index[first_index][second_index] = np.array([j + 1])
+                print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
 
     return inverted_index
 
