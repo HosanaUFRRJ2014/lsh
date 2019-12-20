@@ -11,6 +11,7 @@ d1 = "Hosana Gomes"
 d2 = "python é bom 1"
 d3 = "Estou com sono"
 d4 = "Vivo com bastante fome Hosana"
+d5 = "Hosana Gomes python"
 
 
 SELECTION_FUNCTIONS = [
@@ -83,43 +84,71 @@ def generate_inverted_index(
     documents, td_matrix, permutation_count
 ):
     matrix_m = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    matrix_n = len(documents)
-    inverted_index = lil_matrix(
+    matrix_n = td_matrix.shape[0] + 1
+    inverted_index = np.zeros(
         (matrix_m, matrix_n),
         dtype=np.ndarray
     )
 
-    fingerprints = np.array(range(1, td_matrix.shape[0] + 1))
-    for j in range(matrix_n):
-        # dj é um vetor bidimensional aleatório
-        # (para representar uma música que já extraímos o mínimo e o máximo).
-        dj = []
+    fingerprints = np.array(range(1, matrix_n))
+    for j in range(td_matrix.shape[1]):
         for i in range(permutation_count):
             dj_permutation = permutate(
                 to_permute=td_matrix[:, j],
-                shuffle_seed=permutation_count,
+                shuffle_seed=i,
                 fingerprints=fingerprints
             )
-            print(dj_permutation)
             for l in range(SELECTION_FUNCTION_COUNT):
                 first_index = _get_index(
                     permutation_number=i,
                     selecion_function_code=l
                 )
-                second_index = SELECTION_FUNCTIONS[l](dj_permutation)
-                if inverted_index[first_index][0].size == 0:
-                    pass
-                    # inverted_index[first_index][0] = np.array([j])
-                else:
-                    inverted_index[first_index][second_index].add(j)
-
-                print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l], _get_index(i, l),SELECTION_FUNCTIONS[l](dj_permutation),j))
+                X = np.nonzero(dj_permutation)
+                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))
+                print("(%d, %d) on (%d, %d)"%(first_index, second_index, matrix_m, matrix_n),dj_permutation[X])
+                try:
+                    inverted_index[first_index][second_index][0]==0
+                    inverted_index[first_index][second_index] = np.append(inverted_index[first_index][second_index], [j+1])
+                except:
+                    inverted_index[first_index][second_index] = np.array([j+1])
+                print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l], first_index,second_index,j+1))
+                print("@@",inverted_index,"@@")
 
     return inverted_index
 
 
+def search_inverted_index(
+    query_td_matrix, inverted_index, permutation_count
+):
+    matrix_m = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
+    matrix_n = query_td_matrix.shape[0] + 1
+    inverted_index = np.zeros(
+        (matrix_m, matrix_n),
+        dtype=np.ndarray
+    )
+
+    fingerprints = np.array(range(1, matrix_n))
+    for j in range(query_td_matrix.shape[1]):
+        for i in range(permutation_count):
+            dj_permutation = permutate(
+                to_permute=query_td_matrix[:, j],
+                shuffle_seed=i,
+                fingerprints=fingerprints
+            )
+            for l in range(SELECTION_FUNCTION_COUNT):
+                first_index = _get_index(
+                    permutation_number=i,
+                    selecion_function_code=l
+                )
+                X = np.nonzero(dj_permutation)
+                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))
+                retrieved_documents = inverted_index[first_index][second_index]
+                print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
+    return inverted_index
+
+
 def main():
-    documents = [d1, d2, d3, d4]
+    documents = [d1, d2, d3, d4, d5]
     vocabulary = {}
     td_matrix = tokenize(documents, vocabulary)
     print(td_matrix)
@@ -129,8 +158,11 @@ def main():
         documents, td_matrix, 4
     )
 
-    for i in inverted_index:
-        print(i)
+    query = d5
+    q_td_matrix = tokenize([query], vocabulary)
+    search_inverted_index(q_td_matrix, inverted_index, 4)
+
+   
 
 
 if __name__ == '__main__':
