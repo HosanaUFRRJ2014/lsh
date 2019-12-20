@@ -1,10 +1,7 @@
 # -*-coding:utf8;-*-
-# qpy:3
-# qpy:console
 from random import sample, randint
 from copy import copy
 import numpy as np
-from pprint import pprint
 from scipy.sparse import lil_matrix
 
 d1 = "Hosana Gomes"
@@ -104,9 +101,9 @@ def generate_inverted_index(
                     permutation_number=i,
                     selecion_function_code=l
                 )
-                X = np.nonzero(dj_permutation)
-                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))-1
-                print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[X])
+                non_zero_indexes = np.nonzero(dj_permutation)
+                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes]))-1
+                print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
                 if isinstance(inverted_index[first_index][second_index], np.ndarray):
                     inverted_index[first_index][second_index] = np.append(
                         inverted_index[first_index][second_index],
@@ -123,7 +120,7 @@ def search_inverted_index(
     query_td_matrix, inverted_index, permutation_count
 ):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    documents_rank = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
+    suspicious = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT
     num_columns = query_td_matrix.shape[0] # + 1
 
@@ -140,18 +137,21 @@ def search_inverted_index(
                     permutation_number=i,
                     selecion_function_code=l
                 )
-                X = np.nonzero(dj_permutation)
-                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))-1
+                non_zero_indexes = np.nonzero(dj_permutation)
+                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes]))-1
 
                 try:
-                    retrieved_documents = inverted_index[first_index][second_index]
+                    retrieved = inverted_index[first_index][second_index]
 
-                    if retrieved_documents != 0:
-                        documents_rank[retrieved_documents] += 1
-                    print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
+                    if retrieved != 0:
+                        suspicious = np.append(suspicious, retrieved)
+                    print("retrieved documents for fingerprint %d : "%(second_index), retrieved)
                 except IndexError as e:
                     continue
-    return documents_rank
+
+    non_zero_indexes = np.nonzero(suspicious)
+    suspicious = np.unique(suspicious[non_zero_indexes])
+    return suspicious
 
 
 def main():
@@ -168,10 +168,10 @@ def main():
 
     query = ['paralelepipedoebacana é']
     query_td_matrix = tokenize(query, vocabulary)
-    documents_rank = search_inverted_index(
+    suspicious = search_inverted_index(
         query_td_matrix, inverted_index, NUM_OF_PERMUTATIONS
     )
-    print(documents_rank)
+    print(suspicious)
 
 
 if __name__ == '__main__':
