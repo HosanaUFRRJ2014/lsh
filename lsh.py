@@ -122,14 +122,12 @@ def generate_inverted_index(
 def search_inverted_index(
     query_td_matrix, inverted_index, permutation_count
 ):
-    matrix_m = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    matrix_n = query_td_matrix.shape[0] + 1
-    inverted_index = np.zeros(
-        (matrix_m, matrix_n),
-        dtype=np.ndarray
-    )
+    # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
+    documents_rank = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
+    num_lines = permutation_count * SELECTION_FUNCTION_COUNT
+    num_columns = query_td_matrix.shape[0] # + 1
 
-    fingerprints = np.array(range(1, matrix_n))
+    fingerprints = np.array(range(1, num_columns+1))
     for j in range(query_td_matrix.shape[1]):
         for i in range(permutation_count):
             dj_permutation = permutate(
@@ -143,13 +141,21 @@ def search_inverted_index(
                     selecion_function_code=l
                 )
                 X = np.nonzero(dj_permutation)
-                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))
-                retrieved_documents = inverted_index[first_index][second_index]
-                print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
-    return inverted_index
+                second_index = int(SELECTION_FUNCTIONS[l](dj_permutation[X]))-1
+
+                try:
+                    retrieved_documents = inverted_index[first_index][second_index]
+
+                    if retrieved_documents != 0:
+                        documents_rank[retrieved_documents] += 1
+                    print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
+                except IndexError as e:
+                    continue
+    return documents_rank
 
 
 def main():
+    NUM_OF_PERMUTATIONS = 4
     documents = [d1, d2, d3, d4, d5]
     vocabulary = {}
     td_matrix = tokenize(documents, vocabulary)
@@ -157,14 +163,15 @@ def main():
     print(vocabulary)
 
     inverted_index = generate_inverted_index(
-        documents, td_matrix, 4
+        documents, td_matrix, NUM_OF_PERMUTATIONS
     )
 
-    query = d5
-    q_td_matrix = tokenize([query], vocabulary)
-    search_inverted_index(q_td_matrix, inverted_index, 4)
-
-   
+    query = ['paralelepipedoebacana é']
+    query_td_matrix = tokenize(query, vocabulary)
+    documents_rank = search_inverted_index(
+        query_td_matrix, inverted_index, NUM_OF_PERMUTATIONS
+    )
+    print(documents_rank)
 
 
 if __name__ == '__main__':
