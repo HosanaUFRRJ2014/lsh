@@ -2,7 +2,6 @@
 from copy import copy
 import numpy as np
 from random import sample, randint
-from pprint import pprint
 from scipy.sparse import lil_matrix
 
 d1 = "Hosana Gomes"
@@ -148,9 +147,11 @@ def search_inverted_index(
                     print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
                 except IndexError as e:
                     continue
-    print('similar_docs_count: ', similar_docs_count)
     return similar_docs_count
 
+    non_zero_indexes = np.nonzero(suspicious)
+    suspicious = np.unique(suspicious[non_zero_indexes])
+    return suspicious
 
 def calculate_jaccard_similarity(query_document, similar_document):
     '''
