@@ -1,0 +1,30 @@
+Este livro não é uma introdução à tecnologia orientada a objetos ou ao projeto orientado
+a objetos. Já existem muitos livros bons sobre esses tópicos. Este livro pressupõe que o
+usuário seja razoavelmente fluente em pelo menos uma linguagem de programação
+
+orientada a objetos e tenha alguma experiência em projeto orientado a objetos. Defini-
+tivamente, não deve ser o tipo de usuário que recorre ao dicionário quando menciona-
+mos “tipos” e “polimorfismo”, ou “herança de interface” por oposição a “herança de
+
+implementação”.
+Por outro lado, este livro tampouco é um tratado técnico avançado. É um livro de
+padrões de projeto (design patterns) que descreve soluções simples para problemas
+específicos no projeto de softwareorientado a objetos. Padrões de projeto captura soluções
+que foram desenvolvidas e aperfeiçoadas ao longo do tempo. Daí os padrões de projeto
+não serem os projetos que as pessoas tendem a gerar inicialmente. Eles refletem
+
+modelagens e recodificações, nunca relatadas, resultado dos esforços dos desenvolve-
+dores por maior reutilização e flexibilidade em seus sistemas de software. Padrões de
+
+projeto captura essas soluções em uma forma sucinta e facilmente aplicável.
+Os padrões de projeto não exigem nenhum recurso incomum da linguagem, nem
+truques de programação surpreendentes para impressionar seus amigos e gerentes.
+Todos podem ser implementados em linguagens orientadas a objetos comuns, embora
+possam exigir um pouco mais de trabalho que soluções ad hoc. Porém, o esforço
+adicional invariavelmente traz dividendos na forma de maior flexibilidade.
+Uma vez que você tenha compreendido os padrões de projeto e tenha exclamado
+“Ah!” (e não somente “Hum?”) na sua experiência com eles, nunca mais pensará
+sobre projeto orientado a objetos da mesma maneira. Você terá percepções que
+tornarão seus projetos mais flexíveis, modulares, reutilizáveis e compreensíveis – o
+que, afinal, é a razão pela qual você está interessado na tecnologia orientada a objetos,
+certo?

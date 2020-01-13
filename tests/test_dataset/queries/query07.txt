@@ -1,0 +1,10 @@
+Este livro não é uma introdução à tecnologia orientada a objetos ou ao projeto orientado
+a objetos. Há muitos livros ótimos a respeito desses tópicos. Este livro pressupõe que o
+usuário seja familiarizado em pelo menos uma linguagem de programação orientada a objetos e tenha alguma experiência em projeto orientado a objetos. Defini-
+tivamente, não deve ser o tipo de leitor que vai ao dicionário quando menciona-
+mos “tipos” e “polimorfismo”, ou “herança de interface” por oposição a “herança de
+implementação”.
+Por outro lado, este livro não é um tratado técnico avançado. É um livro de
+padrões de projeto (design patterns) que descreve resoluções simples para situações
+específicas no projeto de software orientado a objetos. Padrões de projeto pega soluções
+que foram desenvolvidas e melhoradas ao longo do tempo.

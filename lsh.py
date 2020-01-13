@@ -3,6 +3,7 @@ from copy import copy
 import numpy as np
 from random import sample, randint
 from scipy.sparse import lil_matrix
+from argparse import ArgumentParser
 
 d1 = "Hosana Gomes"
 d2 = "python é bom 1"
@@ -16,6 +17,10 @@ SELECTION_FUNCTIONS = [
     max
 ]
 SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
+
+
+def read_files():
+    pass
 
 
 def get_document_chunks(document):
@@ -100,7 +105,7 @@ def generate_inverted_index(td_matrix, permutation_count):
                 second_index = int(
                     SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
                 ) - 1
-                print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
+                # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
                 if isinstance(inverted_index[first_index][second_index], np.ndarray):
                     inverted_index[first_index][second_index] = np.append(
                         inverted_index[first_index][second_index],
@@ -108,7 +113,7 @@ def generate_inverted_index(td_matrix, permutation_count):
                     )
                 else:
                     inverted_index[first_index][second_index] = np.array([j + 1])
-                print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
+                # print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
 
     return inverted_index
 
@@ -141,10 +146,10 @@ def search_inverted_index(
 
                 try:
                     retrieved_documents = inverted_index[first_index][second_index]
-                    print('retrieved_documents:', retrieved_documents)
+                    # print('retrieved_documents:', retrieved_documents)
                     if not isinstance(retrieved_documents, int):
                         similar_docs_count[retrieved_documents] += 1
-                    print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
+                    # print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
                 except IndexError as e:
                     continue
     return similar_docs_count
@@ -152,6 +157,7 @@ def search_inverted_index(
     non_zero_indexes = np.nonzero(suspicious)
     suspicious = np.unique(suspicious[non_zero_indexes])
     return suspicious
+
 
 def calculate_jaccard_similarity(query_document, similar_document):
     '''
@@ -193,17 +199,28 @@ def calculate_jaccard_similarities(query_document, similar_docs_count, documents
     return jaccard_similarities
 
 
-def main():
-    NUM_OF_PERMUTATIONS = 4  # aumentar para testar com dataset maior
-    documents = np.array([d1, d2, d3, d4, d5])
+def lsh(documents_list, query, num_permutations):
+    """     parser = ArgumentParser()
+    parser.add_argument(
+        "np",
+        type=int,
+        help="Number of permutations"
+    )
+    args = parser.parse_args()
+    NUM_OF_PERMUTATIONS = args.np """
+    NUM_OF_PERMUTATIONS = num_permutations
+    # NUM_OF_PERMUTATIONS = 4  # aumentar para testar com dataset maior
+    # documents = np.array([d1, d2, d3, d4, d5])
+    documents = np.array(documents_list)
     vocabulary = {}
     td_matrix = tokenize(documents, vocabulary)
-    print(td_matrix)
-    print(vocabulary)
+    # print(td_matrix)
+    # print(vocabulary)
 
     inverted_index = generate_inverted_index(td_matrix, NUM_OF_PERMUTATIONS)
 
-    query = ['Hosana Gomes']
+    # query = ['Hosana Gomes']
+    query = [query]
     query_td_matrix = tokenize(query, vocabulary)
     similar_docs_count = search_inverted_index(
         query_td_matrix, inverted_index, NUM_OF_PERMUTATIONS
@@ -217,5 +234,5 @@ def main():
     print('jaccard_similarities: ', jaccard_similarities)
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     lsh()
