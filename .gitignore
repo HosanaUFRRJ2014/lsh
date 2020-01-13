@@ -2,3 +2,5 @@
 \.vscode/\.ropeproject/config\.py
 
 \.vscode/\.ropeproject/objectdb
+
+__pycache__/
