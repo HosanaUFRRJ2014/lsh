@@ -5,22 +5,12 @@ from random import sample, randint
 from scipy.sparse import lil_matrix
 from argparse import ArgumentParser
 
-d1 = "Hosana Gomes"
-d2 = "python é bom 1"
-d3 = "Estou com sono"
-d4 = "Vivo com bastante fome Hosana"
-d5 = "Hosana Gomes python"
+from constants import (
+    SELECTION_FUNCTIONS,
+    SELECTION_FUNCTION_COUNT
+)
 
-
-SELECTION_FUNCTIONS = [
-    min,
-    max
-]
-SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
-
-
-def read_files():
-    pass
+__all__ = ["lsh"]
 
 
 def get_document_chunks(document):
@@ -39,7 +29,7 @@ def _get_index(permutation_number, selecion_function_code=0):
     return permutation_number * (SELECTION_FUNCTION_COUNT) + selecion_function_code
 
 
-def vocab_index(term, v):
+def _vocab_index(term, v):
     if term in v.keys():
         return v[term]
     else:
@@ -53,7 +43,7 @@ def tokenize(documents, v):
         di_terms = []
         document_chunks = get_document_chunks(documents[i])
         for termj in document_chunks:
-            di_terms.append(vocab_index(termj, v))
+            di_terms.append(_vocab_index(termj, v))
         td_matrix_temp.append(di_terms)
         di_terms = None
     td_matrix = np.zeros([len(v), len(documents)])
@@ -182,8 +172,11 @@ def calculate_jaccard_similarity(query_document, similar_document):
 def calculate_jaccard_similarities(query_document, similar_docs_count, documents):
     '''
     Calculates jaccard similarity for all similar documents found in lsh search.
-    Return an ordered jaccard similarity dictionary from de most to the less
-    similar document.
+
+    :return: List of tuples. For each tuple, first position represents
+    document index number. The second position is the Jaccard Similarity
+    with the query. This list of similarities is ordered from the most to
+    the less similar.
     '''
     similar_docs_indexes = (np.nonzero(similar_docs_count)[0] - 1)
     similar_documents = documents[similar_docs_indexes]
@@ -200,39 +193,37 @@ def calculate_jaccard_similarities(query_document, similar_docs_count, documents
 
 
 def lsh(documents_list, query, num_permutations):
-    """     parser = ArgumentParser()
-    parser.add_argument(
-        "np",
-        type=int,
-        help="Number of permutations"
-    )
-    args = parser.parse_args()
-    NUM_OF_PERMUTATIONS = args.np """
-    NUM_OF_PERMUTATIONS = num_permutations
-    # NUM_OF_PERMUTATIONS = 4  # aumentar para testar com dataset maior
-    # documents = np.array([d1, d2, d3, d4, d5])
-    documents = np.array(documents_list)
+    """
+    Perform LSH permutation-based algorithm in a list of documents,given a
+    query.
+
+    Arguments:
+        documents_list {list} -- list of documents which will be indexed.
+        query {str} -- A single query
+        num_permutations {int} -- number of permutations LSH will make
+
+    Returns:
+        list -- jaccard similarities, calculated over the list of similar
+        documents found in LSH search and the query.
+    """
+    # Indexing
     vocabulary = {}
+    documents = np.array(documents_list)
     td_matrix = tokenize(documents, vocabulary)
-    # print(td_matrix)
-    # print(vocabulary)
+    inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
-    inverted_index = generate_inverted_index(td_matrix, NUM_OF_PERMUTATIONS)
+    # Query
+    if not isinstance(query, list):
+        query = [query]
 
-    # query = ['Hosana Gomes']
-    query = [query]
     query_td_matrix = tokenize(query, vocabulary)
     similar_docs_count = search_inverted_index(
-        query_td_matrix, inverted_index, NUM_OF_PERMUTATIONS
+        query_td_matrix, inverted_index, num_permutations
     )
+
+    # Jaccard Similarity
     jaccard_similarities = calculate_jaccard_similarities(
         query, similar_docs_count, documents
     )
 
-    for doc_index, sim_percent in jaccard_similarities:
-        print('document {} is {}% similar'.format(doc_index, sim_percent))
-    print('jaccard_similarities: ', jaccard_similarities)
-
-
-# if __name__ == '__main__':
-#     lsh()
+    return jaccard_similarities

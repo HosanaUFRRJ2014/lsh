@@ -39,6 +39,7 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 
 ## Execução:
 
-    python lsh.py [NUMERO_DE_PERMUTACOES]
+    python main.py [NUMERO_DE_PERMUTACOES]
 
-- NUMERO_DE_PERMUTACOES é o número de permutações que o algoritmo lsh irá executar
+- NUMERO_DE_PERMUTACOES  (Optional) é o número de permutações que o algoritmo
+lsh irá executar

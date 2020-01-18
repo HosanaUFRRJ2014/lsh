@@ -6,7 +6,7 @@ from lsh import lsh
 def tests():
     parser = ArgumentParser()
     parser.add_argument(
-        "np",
+        "number_of_permutations",
         type=int,
         help="Number of permutations"
     )
