@@ -27,6 +27,23 @@ Features calculadas:
  - pitch variance
  - average intensity
  - interval
+
+Features calculadas X features na essentia: (consulte essentia_features.txt)
+ - volume
+ - balance
+ - pronunciation rate
+ - mute rate 
+    -> lowlevel.silence_rate*
+      * Tem nas opções 20, 30 e 60 DB.
+      - Para cada uma dessas opções em decibeis, exite as opções, dmean, dmean2, dvar, dvar2, max, median, min, stdev, var 
+ - total duration time
+    -> len(audio)/44100.0 (aúdio carregado com EqloudLoader)
+ - pitch variance
+    -> lowlevel.pitch_salience.var ???
+ - average intensity
+    -> lowlevel.average_loudness ???
+ - interval
+
 A sequência de notas do arquivo MIDI é uma sequência de tuplas de tamanho dois, na qual a primeira posição é o valor da nota e t é a duração. Com o frame shift, as notas são convertidas numa sequência de tuplas de duas posições, na qual a primeira é o valor da nota e a segunda é o número de frames contínuos.
 
 Indexação PLSH:
