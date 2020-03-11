@@ -1,7 +1,11 @@
 # -*-coding:utf8;-*-
 from argparse import ArgumentParser
 from constants import DEFAULT_NUMBER_OF_PERMUTATIONS
-from lsh import lsh
+from lsh import (
+    calculate_jaccard_similarities,
+    create_index,
+    search
+)
 
 
 def main():

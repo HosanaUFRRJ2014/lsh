@@ -10,7 +10,8 @@ from constants import (
     SELECTION_FUNCTION_COUNT
 )
 
-__all__ = ["lsh"]
+# __all__ = ["lsh"]
+__all__ = ["calculate_jaccard_similarities", "create_index", "search"]
 
 
 def get_document_chunks(document):
@@ -169,7 +170,7 @@ def calculate_jaccard_similarity(query_document, similar_document):
     return jaccard_similarity
 
 
-def calculate_jaccard_similarities(query_document, similar_docs_count, documents):
+def calculate_jaccard_similarities(query_document, similar_docs_count, documents_list):
     '''
     Calculates jaccard similarity for all similar documents found in lsh search.
 
@@ -178,6 +179,7 @@ def calculate_jaccard_similarities(query_document, similar_docs_count, documents
     with the query. This list of similarities is ordered from the most to
     the less similar.
     '''
+    documents = np.array(documents_list)
     similar_docs_indexes = (np.nonzero(similar_docs_count)[0] - 1)
     similar_documents = documents[similar_docs_indexes]
     jaccard_similarities = {
@@ -192,8 +194,33 @@ def calculate_jaccard_similarities(query_document, similar_docs_count, documents
     return jaccard_similarities
 
 
+def create_index(documents_list, num_permutations):
+    # Indexing
+    vocabulary = {}
+    documents = np.array(documents_list)
+    td_matrix = tokenize(documents, vocabulary)
+    inverted_index = generate_inverted_index(td_matrix, num_permutations)
+
+    # TODO: serialize inverted_index
+    return inverted_index
+
+
+def search(query, inverted_index, num_permutations):
+    # Query
+    vocabulary = {}
+    if not isinstance(query, list):
+        query = [query]
+
+    query_td_matrix = tokenize(query, vocabulary)
+    similar_docs_count = search_inverted_index(
+        query_td_matrix, inverted_index, num_permutations
+    )
+
+    return similar_docs_count
+
+"""
 def lsh(documents_list, query, num_permutations):
-    """
+    ""/"
     Perform LSH permutation-based algorithm in a list of documents,given a
     query.
 
@@ -205,7 +232,7 @@ def lsh(documents_list, query, num_permutations):
     Returns:
         list -- jaccard similarities, calculated over the list of similar
         documents found in LSH search and the query.
-    """
+    ""/"
     # Indexing
     vocabulary = {}
     documents = np.array(documents_list)
@@ -227,3 +254,4 @@ def lsh(documents_list, query, num_permutations):
     )
 
     return jaccard_similarities
+"""
