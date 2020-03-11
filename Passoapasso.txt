@@ -1,0 +1,3 @@
+Offline (geração dos indexes)
+1. Extrair features???
+2. Extrair vetor de pitch para criar os índice PLSH e NLSH
