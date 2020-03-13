@@ -1,6 +1,8 @@
 # -*-coding:utf8;-*-
+import json
 from copy import copy
 import numpy as np
+from math import floor
 from random import sample, randint
 from scipy.sparse import lil_matrix
 from argparse import ArgumentParser
@@ -10,17 +12,37 @@ from constants import (
     SELECTION_FUNCTION_COUNT
 )
 
+from serializer import dump_index, NumpyArrayEncoder
+
 # __all__ = ["lsh"]
 __all__ = ["calculate_jaccard_similarities", "create_index", "search"]
 
 
-def get_document_chunks(document):
+# def get_document_chunks(document):
+def get_document_chunks(pitch_values):
     '''
-    Split the document in chunks.
+    Split the pitch vector into vectors.
     '''
-    if isinstance(document, list):
-        document = document[0]
-    return document.split(' ')
+    # if isinstance(document, list):
+    #     document = document[0]
+    # return document.split(' ')
+
+    # One song in PLSH index
+    EXTRACTING_INTERVAL = 2
+    WINDOW_SHIFT = 15
+    WINDOW_LENGTH = 60
+    pitch_vectors = []
+    window_start = 0
+    number_of_windows = len(pitch_values) / (WINDOW_SHIFT)
+    number_of_windows = floor(number_of_windows)
+    # # positions_in_original_song = []
+    for window in range(number_of_windows):
+        window_end = window_start + WINDOW_LENGTH
+        pitch_vector = pitch_values[window_start:window_end:EXTRACTING_INTERVAL]
+        pitch_vectors.append(pitch_vector)
+        window_start += WINDOW_SHIFT
+
+    return pitch_vectors
 
 
 def _get_index(permutation_number, selecion_function_code=0):
@@ -31,26 +53,37 @@ def _get_index(permutation_number, selecion_function_code=0):
 
 
 def _vocab_index(term, v):
-    if term in v.keys():
-        return v[term]
+    # TODO: Does it need to take all the pitch vector to be the key?
+    # dumped_term = term
+    copied = set([int(p) for p in term])
+    copied = sorted(copied)
+
+    dumped_term = ''.join(str(p) for p in copied[:2])
+    print(dumped_term)
+    if dumped_term in v.keys():
+        return v[dumped_term]
     else:
-        v[term] = len(v) + 1
-        return v[term]
+        v[dumped_term] = len(v) + 1
+        return v[dumped_term]
 
 
 def tokenize(documents, v):
+    # TODO: Trocar pela indexação pitch-vizinhos??
     td_matrix_temp = []
-    for i in range(len(documents)):
+    documents_length = len(documents)
+    for i in range(documents_length):
         di_terms = []
         document_chunks = get_document_chunks(documents[i])
         for termj in document_chunks:
             di_terms.append(_vocab_index(termj, v))
         td_matrix_temp.append(di_terms)
         di_terms = None
-    td_matrix = np.zeros([len(v), len(documents)])
+    td_matrix = np.zeros([len(v), documents_length])
 
-    for i in range(len(documents)):
-        td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
+    for i in range(documents_length):
+        # TODO: Verify if I can realy ignore empty ones. Why there are empties?
+        if td_matrix_temp[i]:
+            td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
 
     del td_matrix_temp
     td_matrix_temp = None
@@ -93,17 +126,22 @@ def generate_inverted_index(td_matrix, permutation_count):
                     selecion_function_code=l
                 )
                 non_zero_indexes = np.nonzero(dj_permutation)
-                second_index = int(
-                    SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
-                ) - 1
-                # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
-                if isinstance(inverted_index[first_index][second_index], np.ndarray):
-                    inverted_index[first_index][second_index] = np.append(
-                        inverted_index[first_index][second_index],
-                        [j + 1]
-                    )
-                else:
-                    inverted_index[first_index][second_index] = np.array([j + 1])
+
+                # TODO: Verify if I can ignore empties.
+                # Shouldn't I remove zero pitches at the read moment, like ref [16]
+                # of the base article says?
+                if non_zero_indexes[0].size > 0:
+                    second_index = int(
+                        SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
+                    ) - 1
+                    # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
+                    if isinstance(inverted_index[first_index][second_index], np.ndarray):
+                        inverted_index[first_index][second_index] = np.append(
+                            inverted_index[first_index][second_index],
+                            [j + 1]
+                        )
+                    else:
+                        inverted_index[first_index][second_index] = np.array([j + 1])
                 # print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
 
     return inverted_index
@@ -201,7 +239,9 @@ def create_index(documents_list, num_permutations):
     td_matrix = tokenize(documents, vocabulary)
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
-    # TODO: serialize inverted_index
+    # Serialize index into a file
+    dump_index(inverted_index)
+
     return inverted_index
 
 

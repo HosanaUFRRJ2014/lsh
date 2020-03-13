@@ -6,6 +6,7 @@ from lsh import (
     create_index,
     search
 )
+from loader import load_all_songs_pitch_vectors
 
 
 def main():
@@ -26,10 +27,13 @@ def main():
     args = parser.parse_args()
     num_permutations = args.number_of_permutations
 
-    documents_list = ['fefe']
-    query = 'fefe'
+    # documents_list = ['Python é bom', 'Python é legal', 'Hosana Gomes', 'Eu quero dormir']
+    # query = 'fefe'
+    # inverted_index = create_index(documents_list, num_permutations)
 
-    
+    pitch_vectors = load_all_songs_pitch_vectors()
+    inverted_index = create_index(pitch_vectors, num_permutations)
+
     '''
     jaccard_similarities = lsh(
         documents_list=documents_list,
