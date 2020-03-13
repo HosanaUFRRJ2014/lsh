@@ -5,3 +5,8 @@ SELECTION_FUNCTIONS = [
     max
 ]
 SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
+
+
+PATH_TO_DATASET = '/home/hosana/TCC/uniformiza_dataset/'
+WAV_SONGS_FILENAME = 'wav_songs.list'
+SONGS_WAV_PATH = 'songs_wav'
