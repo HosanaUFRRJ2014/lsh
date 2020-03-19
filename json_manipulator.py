@@ -15,7 +15,16 @@ class NumpyArrayEncoder(JSONEncoder):
 
 
 def dump_index(inverted_index):
-    print('Inverted index in serializer.py')
-    print(inverted_index)
+    # print('Inverted index in json_manipulator.py')
+    # print(inverted_index)
     with open('inverted_index.json', 'w') as json_file:
         json.dump(inverted_index, json_file, cls=NumpyArrayEncoder)
+
+
+def load_index():
+    inverted_index = None
+    with open('inverted_index.json', 'r') as json_file:
+        loaded_index = json.load(json_file)
+        inverted_index = numpy.asarray(loaded_index)
+
+    return inverted_index

@@ -12,7 +12,7 @@ from constants import (
     SELECTION_FUNCTION_COUNT
 )
 
-from serializer import dump_index, NumpyArrayEncoder
+from json_manipulator import dump_index, NumpyArrayEncoder
 
 # __all__ = ["lsh"]
 __all__ = ["calculate_jaccard_similarities", "create_index", "search"]
