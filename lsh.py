@@ -27,7 +27,6 @@ def get_document_chunks(pitch_values):
     #     document = document[0]
     # return document.split(' ')
 
-    # One song in PLSH index
     EXTRACTING_INTERVAL = 2
     WINDOW_SHIFT = 15
     WINDOW_LENGTH = 60
@@ -59,7 +58,7 @@ def _vocab_index(term, v):
     copied = sorted(copied)
 
     dumped_term = ''.join(str(p) for p in copied[:2])
-    print(dumped_term)
+    # print(dumped_term)
     if dumped_term in v.keys():
         return v[dumped_term]
     else:
@@ -169,18 +168,23 @@ def search_inverted_index(
                     selecion_function_code=l
                 )
                 non_zero_indexes = np.nonzero(dj_permutation)
-                second_index = int(
-                    SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
-                ) - 1
 
-                try:
-                    retrieved_documents = inverted_index[first_index][second_index]
-                    # print('retrieved_documents:', retrieved_documents)
-                    if not isinstance(retrieved_documents, int):
-                        similar_docs_count[retrieved_documents] += 1
-                    # print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
-                except IndexError as e:
-                    continue
+                # TODO: Verify if I can ignore empties.
+                # Shouldn't I remove zero pitches at the read moment, like ref [16]
+                # of the base article says?
+                if non_zero_indexes[0].size > 0:
+                    second_index = int(
+                        SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
+                    ) - 1
+
+                    try:
+                        retrieved_documents = inverted_index[first_index][second_index]
+                        # print('retrieved_documents:', retrieved_documents)
+                        if not isinstance(retrieved_documents, int):
+                            similar_docs_count[retrieved_documents] += 1
+                        # print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
+                    except IndexError as e:
+                        continue
     return similar_docs_count
 
     non_zero_indexes = np.nonzero(suspicious)
