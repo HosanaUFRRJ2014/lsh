@@ -13,3 +13,11 @@ WAV_SONGS_PATH = 'songs_wav'
 
 FILENAMES_OF_QUERIES = '{}/{}'.format(PATH_TO_DATASET, 'queries.list')
 QUERIES_PATH = 'queries'
+
+
+CREATE_INDEX = 'create_index'
+SEARCH = 'search'
+VALID_METHODS = [
+    CREATE_INDEX,
+    SEARCH
+]
