@@ -50,7 +50,7 @@ def _load_all_audio_pitch_vectors(filenames_file, path):
         print('path: ', audio_path)
         audio = _load_audio(audio_path)
         pitch_vector = _extract_pitch_vector(audio)
-        pitch_vectors.append(pitch_vector)
+        pitch_vectors.append((audio_path, pitch_vector))
 
     return pitch_vectors
 

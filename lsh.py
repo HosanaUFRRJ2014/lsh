@@ -1,5 +1,4 @@
 # -*-coding:utf8;-*-
-import json
 from copy import copy
 import numpy as np
 from math import floor
@@ -12,7 +11,7 @@ from constants import (
     SELECTION_FUNCTION_COUNT
 )
 
-from json_manipulator import dump_index, NumpyArrayEncoder
+from json_manipulator import dump_index
 
 # __all__ = ["lsh"]
 __all__ = ["calculate_jaccard_similarities", "create_index", "search"]
@@ -51,33 +50,50 @@ def _get_index(permutation_number, selecion_function_code=0):
     return permutation_number * (SELECTION_FUNCTION_COUNT) + selecion_function_code
 
 
-def _vocab_index(term, v):
+def _vocab_index(term, vocabulary):
     # TODO: Does it need to take all the pitch vector to be the key?
     # dumped_term = term
     copied = set([int(p) for p in term])
     copied = sorted(copied)
 
-    dumped_term = ''.join(str(p) for p in copied[:2])
-    # print(dumped_term)
-    if dumped_term in v.keys():
-        return v[dumped_term]
-    else:
-        v[dumped_term] = len(v) + 1
-        return v[dumped_term]
+    vector_size = int(len(copied) / 4)
+    dumped_term = ''.join(str(p) for p in copied[:vector_size])
+
+    if dumped_term not in vocabulary.keys():
+        vocabulary[dumped_term] = len(vocabulary) + 1
+
+    # if dumped_term not in audio_map.keys():
+    #     audio_map[dumped_term] = np.array([])
+
+    # audio_map[dumped_term] = np.append(audio_map, filename)
+
+    return vocabulary[dumped_term], dumped_term
 
 
-def tokenize(documents, v):
+def _audio_mapping_index(dumped_term, audio_map, filename):
+    if dumped_term not in audio_map.keys():
+        audio_map[dumped_term] = np.array([])
+    audio_map[dumped_term] = np.append(audio_map[dumped_term], filename)
+    return audio_map
+
+
+def tokenize(documents):
     # TODO: Trocar pela indexação pitch-vizinhos??
+    vocabulary = {}
+    audio_map = {}
     td_matrix_temp = []
     documents_length = len(documents)
     for i in range(documents_length):
         di_terms = []
-        document_chunks = get_document_chunks(documents[i])
+        filename, document = documents[i]
+        document_chunks = get_document_chunks(document)
         for termj in document_chunks:
-            di_terms.append(_vocab_index(termj, v))
+            index, dumped_term = _vocab_index(termj, vocabulary)
+            di_terms.append(index)
+            audio_map = _audio_mapping_index(dumped_term, audio_map, filename)
         td_matrix_temp.append(di_terms)
         di_terms = None
-    td_matrix = np.zeros([len(v), documents_length])
+    td_matrix = np.zeros([len(vocabulary), documents_length])
 
     for i in range(documents_length):
         # TODO: Verify if I can realy ignore empty ones. Why there are empties?
@@ -86,7 +102,7 @@ def tokenize(documents, v):
 
     del td_matrix_temp
     td_matrix_temp = None
-    return td_matrix
+    return td_matrix, audio_map
 
 
 def get_fingerprint(vocabulary):
@@ -238,24 +254,26 @@ def calculate_jaccard_similarities(query_document, similar_docs_count, documents
 
 def create_index(documents_list, num_permutations):
     # Indexing
-    vocabulary = {}
     documents = np.array(documents_list)
-    td_matrix = tokenize(documents, vocabulary)
+    td_matrix, audio_mapping = tokenize(documents)
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
+    # Serialize auxiliar index into a file
+    # print()
+    dump_index(audio_mapping, index_name='audio_mapping')
+
     # Serialize index into a file
-    dump_index(inverted_index)
+    dump_index(inverted_index, index_name='inverted_index')
 
     return inverted_index
 
 
 def search(query, inverted_index, num_permutations):
     # Query
-    vocabulary = {}
     if not isinstance(query, list):
         query = [query]
 
-    query_td_matrix = tokenize(query, vocabulary)
+    query_td_matrix, audio_mapping = tokenize(query)
     similar_docs_count = search_inverted_index(
         query_td_matrix, inverted_index, num_permutations
     )

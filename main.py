@@ -42,7 +42,7 @@ def execute_method(method_name, num_permutations):
         # Searching songs
         inverted_index = None
         try:
-            inverted_index = load_index()
+            inverted_index = load_index(filename='inverted_index.json')
         except Exception as e:
             logging.error(e)
             logging.error(
