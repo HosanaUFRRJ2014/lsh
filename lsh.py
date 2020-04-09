@@ -249,6 +249,39 @@ def calculate_jaccard_similarities(query_audios, similar_audios_indexes, similar
     return list_of_jaccard
 
 
+def rescale_audio(query_audio, similar_audio):
+    additional_length = len(similar_audio) - len(query_audio)
+    rescaled_audio = query_audio + [0.0 for i in range(additional_length)]
+    return rescaled_audio
+
+
+def substract_vectors(similar_audio, rescaled_query_audio):
+    result = np.absolute(
+        np.subtract(similar_audio, rescaled_query_audio)
+    )
+
+    return result
+
+
+def calculate_linear_scaling(query_audios, similar_audios_indexes, similar_audios):
+    list_of_distances = []
+    for query_audio in query_audios:
+        distances = dict()
+        for audio_index, similar_audio in zip(similar_audios_indexes, similar_audios):
+            # TODO: passar a usar o segundo valor da tupla nome/vetor
+            rescaled_query_audio = rescale_audio(query_audio[-1].tolist(), similar_audio[-1].tolist())
+            result = substract_vectors(similar_audio[-1], rescaled_query_audio[-1])
+            distances[similar_audio[0]] = sum(result)
+        distances = sorted(
+            distances.items(),
+            key=lambda res: res[1],
+            reverse=True
+        )
+        list_of_distances.append(distances)
+
+    return list_of_distances
+
+
 def create_index(audios_list, num_permutations):
     # Indexing
     audios = np.array(audios_list)
@@ -277,12 +310,17 @@ def search(query, inverted_index, songs_list, num_permutations):
     )
     similar_audios_indexes = (np.nonzero(similar_audios_count)[0] - 1)
     similar_songs = songs[similar_audios_indexes]
-    list_of_jaccard = calculate_jaccard_similarities(
+    # list_of_jaccard = calculate_jaccard_similarities(
+    #     query_audios=query,
+    #     similar_audios_indexes=similar_audios_indexes,
+    #     similar_audios=similar_songs,
+    #     audio_mapping=None
+    # )
+    # print('jaccard_similarities: ', list_of_jaccard)
+    list_of_distances = calculate_linear_scaling(
         query_audios=query,
         similar_audios_indexes=similar_audios_indexes,
-        similar_audios=similar_songs,
-        audio_mapping=None
+        similar_audios=similar_songs
     )
-    print('jaccard_similarities: ', list_of_jaccard)
-
+    print('Linear Scaling distances: ', list_of_distances)
     return similar_audios_count
