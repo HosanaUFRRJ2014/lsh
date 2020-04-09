@@ -18,14 +18,10 @@ __all__ = ["calculate_jaccard_similarities", "create_index", "search"]
 
 
 # def get_document_chunks(document):
-def get_document_chunks(pitch_values):
+def get_audio_chunks(pitch_values):
     '''
     Split the pitch vector into vectors.
     '''
-    # if isinstance(document, list):
-    #     document = document[0]
-    # return document.split(' ')
-
     EXTRACTING_INTERVAL = 2
     WINDOW_SHIFT = 15
     WINDOW_LENGTH = 60
@@ -53,19 +49,16 @@ def _get_index(permutation_number, selecion_function_code=0):
 def _vocab_index(term, vocabulary):
     # TODO: Does it need to take all the pitch vector to be the key?
     # dumped_term = term
-    copied = set([int(p) for p in term])
-    copied = sorted(copied)
+    # copied = set([int(p) for p in term])
+    # copied = sorted(copied)
 
-    vector_size = int(len(copied) / 4)
-    dumped_term = ''.join(str(p) for p in copied[:vector_size])
+    # vector_size = int(len(copied) / 4)
+    # vector_size = len(copied)
+    dumped_term = ''.join(str(p) for p in term)
+    # dumped_term = ''.join(str(int(p)) for p in term)
 
     if dumped_term not in vocabulary.keys():
         vocabulary[dumped_term] = len(vocabulary) + 1
-
-    # if dumped_term not in audio_map.keys():
-    #     audio_map[dumped_term] = np.array([])
-
-    # audio_map[dumped_term] = np.append(audio_map, filename)
 
     return vocabulary[dumped_term], dumped_term
 
@@ -73,29 +66,29 @@ def _vocab_index(term, vocabulary):
 def _audio_mapping_index(dumped_term, audio_map, filename):
     if dumped_term not in audio_map.keys():
         audio_map[dumped_term] = np.array([])
-    audio_map[dumped_term] = np.append(audio_map[dumped_term], filename)
+    audio_map[dumped_term] = np.union1d(audio_map[dumped_term], filename)
     return audio_map
 
 
-def tokenize(documents):
+def tokenize(audios):
     # TODO: Trocar pela indexação pitch-vizinhos??
     vocabulary = {}
     audio_map = {}
     td_matrix_temp = []
-    documents_length = len(documents)
-    for i in range(documents_length):
+    audios_length = len(audios)
+    for i in range(audios_length):
         di_terms = []
-        filename, document = documents[i]
-        document_chunks = get_document_chunks(document)
-        for termj in document_chunks:
+        filename, audio = audios[i]
+        audio_chunks = get_audio_chunks(audio)
+        for termj in audio_chunks:
             index, dumped_term = _vocab_index(termj, vocabulary)
             di_terms.append(index)
             audio_map = _audio_mapping_index(dumped_term, audio_map, filename)
         td_matrix_temp.append(di_terms)
         di_terms = None
-    td_matrix = np.zeros([len(vocabulary), documents_length])
+    td_matrix = np.zeros([len(vocabulary), audios_length])
 
-    for i in range(documents_length):
+    for i in range(audios_length):
         # TODO: Verify if I can realy ignore empty ones. Why there are empties?
         if td_matrix_temp[i]:
             td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
@@ -121,7 +114,7 @@ def permutate(to_permute, shuffle_seed, fingerprints):
 def generate_inverted_index(td_matrix, permutation_count):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT  # + SELECTION_FUNCTION_COUNT
-    num_columns = td_matrix.shape[0] #+ 1
+    num_columns = td_matrix.shape[0]  # + 1
     inverted_index = np.zeros(
         (num_lines, num_columns),
         dtype=np.ndarray
@@ -166,9 +159,9 @@ def search_inverted_index(
     query_td_matrix, inverted_index, permutation_count
 ):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    similar_docs_count = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
+    similar_audios_count = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT
-    num_columns = query_td_matrix.shape[0] # + 1
+    num_columns = query_td_matrix.shape[0]  # + 1
 
     fingerprints = np.array(range(1, num_columns + 1))
     for j in range(query_td_matrix.shape[1]):
@@ -186,7 +179,7 @@ def search_inverted_index(
                 non_zero_indexes = np.nonzero(dj_permutation)
 
                 # TODO: Verify if I can ignore empties.
-                # Shouldn't I remove zero pitches at the read moment, like ref [16]
+                # Shouldn't I remove zero pitches at the reading moment, like ref [16]
                 # of the base article says?
                 if non_zero_indexes[0].size > 0:
                     second_index = int(
@@ -194,21 +187,20 @@ def search_inverted_index(
                     ) - 1
 
                     try:
-                        retrieved_documents = inverted_index[first_index][second_index]
-                        # print('retrieved_documents:', retrieved_documents)
-                        if not isinstance(retrieved_documents, int):
-                            similar_docs_count[retrieved_documents] += 1
-                        # print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
+                        retrieved_pitch_vector = inverted_index[first_index][second_index]
+                        if not isinstance(retrieved_pitch_vector, int):
+                            similar_audios_count[retrieved_pitch_vector] += 1
+                        # print("retrieved pitch vector for fingerprint %d : "%(second_index), retrieved_pitch_vector)
                     except IndexError as e:
                         continue
-    return similar_docs_count
+    return similar_audios_count
 
-    non_zero_indexes = np.nonzero(suspicious)
-    suspicious = np.unique(suspicious[non_zero_indexes])
-    return suspicious
+    # non_zero_indexes = np.nonzero(suspicious)
+    # suspicious = np.unique(suspicious[non_zero_indexes])
+    # return suspicious
 
 
-def calculate_jaccard_similarity(query_document, similar_document):
+def calculate_jaccard_similarity(query_audio, similar_audio):
     '''
     Jaccard Similarity algorithm in steps:
     1. Get the shared members between both sets, i.e. intersection.
@@ -217,45 +209,50 @@ def calculate_jaccard_similarity(query_document, similar_document):
        members found in (2).
     4. Multiply the found number in (3) by 100.
     '''
-    query_chunks = get_document_chunks(query_document)
-    similar_document_chunks = get_document_chunks(similar_document)
+    # TODO: passar a usar o segundo valor da tupla nome/vetor
+    query_chunks = get_audio_chunks(query_audio[-1].tolist())
+    similar_audio_chunks = get_audio_chunks(similar_audio[-1].tolist())
 
-    intersection = set(similar_document_chunks).intersection(query_chunks)
-    union = set(similar_document_chunks + query_chunks)
+    intersection = np.intersect1d(similar_audio_chunks, query_chunks)
+    union = np.union1d(similar_audio_chunks, query_chunks)
 
-    jaccard_similarity = len(intersection) / len(union) * 100
+    jaccard_similarity = 0
+    if union.size > 0:
+        jaccard_similarity = (intersection.size / union.size) * 100
 
     return jaccard_similarity
 
 
-def calculate_jaccard_similarities(query_document, similar_docs_count, documents_list):
+def calculate_jaccard_similarities(query_audios, similar_audios_indexes, similar_audios, audio_mapping):
     '''
-    Calculates jaccard similarity for all similar documents found in lsh search.
+    Calculates jaccard similarity for all similar audios found in lsh search.
 
     :return: List of tuples. For each tuple, first position represents
-    document index number. The second position is the Jaccard Similarity
+    audio index number. The second position is the Jaccard Similarity
     with the query. This list of similarities is ordered from the most to
     the less similar.
     '''
-    documents = np.array(documents_list)
-    similar_docs_indexes = (np.nonzero(similar_docs_count)[0] - 1)
-    similar_documents = documents[similar_docs_indexes]
-    jaccard_similarities = {
-        doc_index + 1: calculate_jaccard_similarity(query_document, document)
-        for doc_index, document in zip(similar_docs_indexes, similar_documents)
-    }
-    jaccard_similarities = sorted(
-        jaccard_similarities.items(),
-        key=lambda sim: sim[1],
-        reverse=True
-    )
-    return jaccard_similarities
+    list_of_jaccard = []
+    for query_audio in query_audios:
+        jaccard_similarities = {}
+        for audio_index, similar_audio in zip(similar_audios_indexes, similar_audios):
+            jaccard_similarities[audio_index + 1] = calculate_jaccard_similarity(
+                query_audio, similar_audio
+            )
+        jaccard_similarities = sorted(
+            jaccard_similarities.items(),
+            key=lambda sim: sim[1],
+            reverse=True
+        )
+        list_of_jaccard.append(jaccard_similarities)
+
+    return list_of_jaccard
 
 
-def create_index(documents_list, num_permutations):
+def create_index(audios_list, num_permutations):
     # Indexing
-    documents = np.array(documents_list)
-    td_matrix, audio_mapping = tokenize(documents)
+    audios = np.array(audios_list)
+    td_matrix, audio_mapping = tokenize(audios)
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
     # Serialize auxiliar index into a file
@@ -268,52 +265,24 @@ def create_index(documents_list, num_permutations):
     return inverted_index
 
 
-def search(query, inverted_index, num_permutations):
+def search(query, inverted_index, songs_list, num_permutations):
     # Query
     if not isinstance(query, list):
         query = [query]
 
-    query_td_matrix, audio_mapping = tokenize(query)
-    similar_docs_count = search_inverted_index(
+    songs = np.array(songs_list)
+    query_td_matrix, query_audio_mapping = tokenize(query)
+    similar_audios_count = search_inverted_index(
         query_td_matrix, inverted_index, num_permutations
     )
-
-    return similar_docs_count
-
-"""
-def lsh(documents_list, query, num_permutations):
-    ""/"
-    Perform LSH permutation-based algorithm in a list of documents,given a
-    query.
-
-    Arguments:
-        documents_list {list} -- list of documents which will be indexed.
-        query {str} -- A single query
-        num_permutations {int} -- number of permutations LSH will make
-
-    Returns:
-        list -- jaccard similarities, calculated over the list of similar
-        documents found in LSH search and the query.
-    ""/"
-    # Indexing
-    vocabulary = {}
-    documents = np.array(documents_list)
-    td_matrix = tokenize(documents, vocabulary)
-    inverted_index = generate_inverted_index(td_matrix, num_permutations)
-
-    # Query
-    if not isinstance(query, list):
-        query = [query]
-
-    query_td_matrix = tokenize(query, vocabulary)
-    similar_docs_count = search_inverted_index(
-        query_td_matrix, inverted_index, num_permutations
+    similar_audios_indexes = (np.nonzero(similar_audios_count)[0] - 1)
+    similar_songs = songs[similar_audios_indexes]
+    list_of_jaccard = calculate_jaccard_similarities(
+        query_audios=query,
+        similar_audios_indexes=similar_audios_indexes,
+        similar_audios=similar_songs,
+        audio_mapping=None
     )
+    print('jaccard_similarities: ', list_of_jaccard)
 
-    # Jaccard Similarity
-    jaccard_similarities = calculate_jaccard_similarities(
-        query, similar_docs_count, documents
-    )
-
-    return jaccard_similarities
-"""
+    return similar_audios_count

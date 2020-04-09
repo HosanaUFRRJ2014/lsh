@@ -39,20 +39,26 @@ def execute_method(method_name, num_permutations):
         # Creating index
         result = create_index(pitch_vectors, num_permutations)
     elif method_name == SEARCH:
+        # Loading pitch vectors from audios
+        # TODO: save it already loaded on a file?
+        song_pitch_vectors = load_pitch_vectors[CREATE_INDEX]()
         # Searching songs
         inverted_index = None
+        audio_mapping = None
         try:
             inverted_index = load_index(filename='inverted_index.json')
+            audio_mapping = load_index(filename='audio_mapping.json')
         except Exception as e:
             logging.error(e)
             logging.error(
-                'ERROR: Couldn\'t load inverted index. ' +
-                'Is it dumped as a file at all? ' +
-                'Use method \'{}\' to generate the inverted index first.'.format(
+                'ERROR: Couldn\'t load inverted index or audio mapping. ' +
+                'Are they dumped as files at all? ' +
+                'Use method \'{}\' to generate the inverted index and audio mapping first.'.format(
                     CREATE_INDEX
                 )
             )
-        result = search(pitch_vectors, inverted_index, num_permutations)
+            exit(1)
+        similar_audios_count = search(pitch_vectors, inverted_index, song_pitch_vectors, num_permutations)
 
     return result
 
