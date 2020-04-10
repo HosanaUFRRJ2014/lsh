@@ -26,3 +26,12 @@ METHODS = [
     CREATE_INDEX,
     SEARCH
 ]
+
+##
+# Matching Algorithms
+LINEAR_SCALING = 'linear_scaling'
+JACCARD_SIMILARITY = 'jaccard_similarity'
+MATCHING_ALGORITHMS = [
+    LINEAR_SCALING,
+    JACCARD_SIMILARITY
+]
