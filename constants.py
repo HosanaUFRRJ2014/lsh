@@ -29,9 +29,11 @@ METHODS = [
 
 ##
 # Matching Algorithms
-LINEAR_SCALING = 'linear_scaling'
 JACCARD_SIMILARITY = 'jaccard_similarity'
+LINEAR_SCALING = 'ls'
+BALS = 'bals'
 MATCHING_ALGORITHMS = [
+    JACCARD_SIMILARITY,
     LINEAR_SCALING,
-    JACCARD_SIMILARITY
+    BALS,
 ]

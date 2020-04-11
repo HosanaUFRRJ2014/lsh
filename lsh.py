@@ -10,20 +10,21 @@ from constants import (
     SELECTION_FUNCTIONS,
     SELECTION_FUNCTION_COUNT,
     JACCARD_SIMILARITY,
-    LINEAR_SCALING
+    LINEAR_SCALING,
+    BALS
 )
 
 from json_manipulator import dump_index
 
-# __all__ = ["lsh"]
+
 __all__ = ["calculate_jaccard_similarities", "create_index", "search"]
 
 
-# def get_document_chunks(document):
-def get_audio_chunks(pitch_values):
+def get_audio_chunks(pitch_values, include_original_positions=False):
     '''
     Split the pitch vector into vectors.
     '''
+    original_positions = []
     EXTRACTING_INTERVAL = 2
     WINDOW_SHIFT = 15
     WINDOW_LENGTH = 60
@@ -35,10 +36,14 @@ def get_audio_chunks(pitch_values):
     for window in range(number_of_windows):
         window_end = window_start + WINDOW_LENGTH
         pitch_vector = pitch_values[window_start:window_end:EXTRACTING_INTERVAL]
+        original_positions.append(window_start)
         pitch_vectors.append(pitch_vector)
         window_start += WINDOW_SHIFT
 
-    return pitch_vectors
+    if include_original_positions:
+        return pitch_vectors, original_positions
+    else:
+        return pitch_vectors
 
 
 def _get_index(permutation_number, selecion_function_code=0):
@@ -72,32 +77,54 @@ def _audio_mapping_index(dumped_term, audio_map, filename):
     return audio_map
 
 
+def _original_position_index(dumped_term, orig_pos_map, original_pos, filename):
+    '''
+    For a given filename, stores its dumped terms and their original positions.
+    '''
+    if filename not in orig_pos_map.keys():
+        orig_pos_map[filename] = np.array([])
+    tuple_of_infos = (dumped_term, original_pos)
+    orig_pos_map[filename] = np.union1d(orig_pos_map[filename], tuple_of_infos)
+
+    return orig_pos_map
+
+
 def tokenize(audios):
     # TODO: Trocar pela indexação pitch-vizinhos??
     vocabulary = {}
     audio_map = {}
+    orig_pos_map = {}
     td_matrix_temp = []
     audios_length = len(audios)
     for i in range(audios_length):
         di_terms = []
         filename, audio = audios[i]
-        audio_chunks = get_audio_chunks(audio)
-        for termj in audio_chunks:
+        audio_chunks, original_positions = get_audio_chunks(
+            audio,
+            include_original_positions=True
+        )
+        for audio_chunk_index, termj in enumerate(audio_chunks):
             index, dumped_term = _vocab_index(termj, vocabulary)
             di_terms.append(index)
             audio_map = _audio_mapping_index(dumped_term, audio_map, filename)
+            orig_pos_map = _original_position_index(
+                dumped_term,
+                orig_pos_map,
+                audio_chunk_index,
+                filename
+            )
         td_matrix_temp.append(di_terms)
         di_terms = None
     td_matrix = np.zeros([len(vocabulary), audios_length])
 
     for i in range(audios_length):
-        # TODO: Verify if I can realy ignore empty ones. Why there are empties?
+        # TODO: Verify if I can really ignore empty ones. Why there are empties?
         if td_matrix_temp[i]:
             td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
 
     del td_matrix_temp
     td_matrix_temp = None
-    return td_matrix, audio_map
+    return td_matrix, audio_map, orig_pos_map
 
 
 def get_fingerprint(vocabulary):
@@ -265,19 +292,77 @@ def substract_vectors(similar_audio, rescaled_query_audio):
     return result
 
 
-def calculate_linear_scaling(query_audios, similar_audios_indexes, similar_audios):
+def calculate_manhattan_distance(similar_audio, rescaled_query_audio):
+    result = substract_vectors(similar_audio, rescaled_query_audio)
+    return sum(result)
+
+
+def calculate_linear_scaling(query_audios, similar_audios_indexes, similar_audios, original_positions_mapping=None):
     distances = {}
     for query_audio_name, query_audio in query_audios:
         linear_scaling = dict()
         for audio_index, similar_audio_tuple in zip(similar_audios_indexes, similar_audios):
-            # TODO: passar a usar o segundo valor da tupla nome/vetor
             similar_audio_filename, similar_audio = similar_audio_tuple
             rescaled_query_audio = rescale_audio(
                 query_audio.tolist(),
                 similar_audio.tolist()
             )
-            result = substract_vectors(similar_audio, rescaled_query_audio)
-            linear_scaling[similar_audio_filename] = sum(result)
+            linear_scaling[similar_audio_filename] = calculate_manhattan_distance(
+                similar_audio,
+                rescaled_query_audio
+            )
+        linear_scaling = sorted(
+            linear_scaling.items(),
+            key=lambda res: res[1],
+            reverse=True
+        )
+        distances[query_audio_name] = linear_scaling
+
+    return distances
+
+
+def get_candidate_neighbourhood(similar_audio, original_positions_mapping):
+    # TODO: TO BE IMPLEMENTED YET
+    print('get_candidate_neighbourhood NOT IMPLEMENTED YET!!!!')
+    neighbours = []
+    return [similar_audio]
+
+
+def calculate_bals(query_audios, similar_audios_indexes, similar_audios, original_positions_mapping):
+    '''
+    Explore candidates neighbourhood
+       - For each candidate, lenghten or shorten it.
+    For each neighbor, measure LS distance.
+    Retain the fragment with the shortest distance.
+    '''
+    distances = {}
+    for query_audio_name, query_audio in query_audios:
+        linear_scaling = dict()
+        for audio_index, similar_audio_tuple in zip(similar_audios_indexes, similar_audios):
+            similar_audio_filename, similar_audio = similar_audio_tuple
+            rescaled_query_audio = rescale_audio(
+                query_audio.tolist(),
+                similar_audio.tolist()
+            )
+            similar_audio_distance = calculate_manhattan_distance(
+                similar_audio,
+                rescaled_query_audio
+            )
+            ## /**
+            neighbours = get_candidate_neighbourhood(
+                similar_audio,
+                original_positions_mapping
+            )
+            # Starts with the similar audio
+            nearest_neighbour_tuple = (similar_audio_distance, similar_audio)
+            for neighbour in neighbours:
+                distance = calculate_manhattan_distance(neighbour, rescaled_query_audio)
+                if distance < nearest_neighbour_tuple[0]:
+                    nearest_neighbour_tuple = (distance, neighbour)
+
+            nearest_neighbour_distance = nearest_neighbour_tuple[0]
+            ## **/
+            linear_scaling[similar_audio_filename] = nearest_neighbour_distance
         linear_scaling = sorted(
             linear_scaling.items(),
             key=lambda res: res[1],
@@ -289,17 +374,19 @@ def calculate_linear_scaling(query_audios, similar_audios_indexes, similar_audio
 
 
 def apply_matching_algorithm(
-    choosed_algorithm, query, similar_audios_indexes, similar_audios
+    choosed_algorithm, query, similar_audios_indexes, similar_audios, original_positions_mapping
 ):
     matching_algorithms = {
         JACCARD_SIMILARITY: calculate_jaccard_similarities,
-        LINEAR_SCALING: calculate_linear_scaling
+        LINEAR_SCALING: calculate_linear_scaling,
+        BALS: calculate_bals
     }
 
     results = matching_algorithms[choosed_algorithm](
         query,
         similar_audios_indexes,
-        similar_audios
+        similar_audios,
+        original_positions_mapping
     )
     return results
 
@@ -307,7 +394,7 @@ def apply_matching_algorithm(
 def create_index(audios_list, num_permutations):
     # Indexing
     audios = np.array(audios_list)
-    td_matrix, audio_mapping = tokenize(audios)
+    td_matrix, audio_mapping, original_positions_mapping = tokenize(audios)
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
     # Serialize auxiliar index into a file
@@ -317,12 +404,16 @@ def create_index(audios_list, num_permutations):
     # Serialize index into a file
     dump_index(inverted_index, index_name='inverted_index')
 
+    dump_index(original_positions_mapping, index_name='original_positions_mapping')
+
     # return inverted_index
 
 
 def search(query, inverted_index, songs_list, num_permutations):
     songs = np.array(songs_list)
-    query_td_matrix, query_audio_mapping = tokenize(query)
+    query_td_matrix, _query_audio_mapping, _original_positions_mapping = tokenize(
+        query
+    )
     similar_audios_count = search_inverted_index(
         query_td_matrix, inverted_index, num_permutations
     )

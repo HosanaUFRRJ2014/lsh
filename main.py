@@ -114,6 +114,7 @@ def main():
         try:
             inverted_index = load_index(index_name='inverted_index')
             audio_mapping = load_index(index_name='audio_mapping')
+            original_positions_mapping = load_index(index_name='original_positions_mapping')
         except Exception as e:
             logging.error(e)
             logging.error(
@@ -136,7 +137,8 @@ def main():
             choosed_algorithm=matching_algorithm,
             query=pitch_vectors,
             similar_audios_indexes=similar_audios_indexes,
-            similar_audios=similar_songs
+            similar_audios=similar_songs,
+            original_positions_mapping=original_positions_mapping
         )
         print_results(matching_algorithm, results)
 
