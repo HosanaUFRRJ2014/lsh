@@ -384,10 +384,15 @@ def apply_matching_algorithm(
             )
             ##
             query_distance[similar_audio_filename] = distance_or_similarity
+
+        reverse_order = False
+        if choosed_algorithm == JACCARD_SIMILARITY:
+            reverse_order = True
+
         query_distance = sorted(
             query_distance.items(),
             key=lambda res: res[1],
-            reverse=True
+            reverse=reverse_order
         )
         all_queries_distances[query_audio_name] = query_distance
 
