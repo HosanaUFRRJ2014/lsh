@@ -141,21 +141,26 @@ def main():
         )
         print_results(matching_algorithm, results)
 
-    # TODO: colocar nome do trecho da música na indexação (REVIEW)
+    # Separar arquivo de mensagens (DONE)
+    # colocar nome do trecho da música na indexação (REVIEW)
     # adaptar cálculo de similaridades pra devolver ranking corretamente (DONE)
     # - Remover os zeros no início e final da música? (DONE)
-    # TODO: Fazer remover zeros como parâmetro de configuração?
-    # TODO: Terminar implementação das métricas de comparação
+    # - Fazer desenho da estrutura do algoritmo para a próxima reunião (DONE).
+    # Terminar implementação das métricas de comparação
     #       - LS, (DONE)
-    #       - BALS
-    #       - KTRA
+    #       - BALS (IN REVIEW)
+    #       - KTRA (DONE)
+    # TODO: Salvar vetores de pitches extraídos
+    # TODO: Verificar outras partes da estrutura do algoritmo (diagrama) para poder
+    # TODO: salvar no disco e otimizar o tempo dos testes (PLSH para cada tipo de parâmetro), até etapa de LS
+    # TODO: Guardar os resultados encontrados por cada métrica
+    # TODO: Implementar MRR
+    # TODO: Implementar uma forma de verificar os resultados de expected_result.txt
+    # TODO: Fazer remover zeros como parâmetro de configuração?
     # TODO: Limitar lista de candidatos (atualmente todo o dataset é candidato)
     # TODO: Fazer opção de buscar música específica (dar nome arquivo)
     # TODO: Criar função para validar os resultados da busca com o arquivo 'expected_results'
-    # TODO: Separar arquivo de mensagens
     # TODO: dar nomes melhores para as coisas em lsh.py
-
-    # - Fazer desenho da estrutura do algoritmo para a próxima reunião.
 
 
 if __name__ == '__main__':
