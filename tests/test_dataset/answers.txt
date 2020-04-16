@@ -1,6 +1,0 @@
-query01.txt, query02.txt - doc01.txt
-query03.txt - doc03.txt
-query04.txt - doc02.txt
-query05.txt - doc01.txt, doc02.txt
-query06.txt - doc04.txt
-query07.txt - doc05.txt
