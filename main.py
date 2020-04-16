@@ -13,7 +13,6 @@ from constants import (
 from json_manipulator import load_index
 from lsh import (
     apply_matching_algorithm,
-    calculate_jaccard_similarities,
     create_index,
     search
 )
@@ -143,18 +142,20 @@ def main():
         print_results(matching_algorithm, results)
 
     # TODO: colocar nome do trecho da música na indexação (REVIEW)
-    # TODO: adaptar cálculo de similaridades pra devolver ranking corretamente (DONE)
-    # TODO: Terminar de implementação das métricas de comparação
+    # adaptar cálculo de similaridades pra devolver ranking corretamente (DONE)
+    # - Remover os zeros no início e final da música? (DONE)
+    # TODO: Fazer remover zeros como parâmetro de configuração?
+    # TODO: Terminar implementação das métricas de comparação
     #       - LS, (DONE)
     #       - BALS
     #       - KTRA
+    # TODO: Limitar lista de candidatos (atualmente todo o dataset é candidato)
     # TODO: Fazer opção de buscar música específica (dar nome arquivo)
     # TODO: Criar função para validar os resultados da busca com o arquivo 'expected_results'
     # TODO: Separar arquivo de mensagens
     # TODO: dar nomes melhores para as coisas em lsh.py
 
     # - Fazer desenho da estrutura do algoritmo para a próxima reunião.
-    # - Remover os zeros no início e final da música?
 
 
 if __name__ == '__main__':

@@ -37,3 +37,6 @@ MATCHING_ALGORITHMS = [
     LINEAR_SCALING,
     BALS,
 ]
+
+# Shifting size
+BALS_SHIFT_SIZE = 15  # arbitrary value
