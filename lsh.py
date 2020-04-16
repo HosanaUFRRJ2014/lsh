@@ -7,6 +7,7 @@ from random import sample, randint
 from scipy.sparse import lil_matrix
 from scipy.ndimage.interpolation import shift
 from argparse import ArgumentParser
+from essentia.standard import Mean
 
 from constants import (
     SELECTION_FUNCTIONS,
@@ -16,7 +17,10 @@ from constants import (
     BALS,
     BALS_SHIFT_SIZE,
     RECURSIVE_ALIGNMENT,
-    MAX_RA_DEPTH
+    MAX_RA_DEPTH,
+    KTRA,
+    MAX_KTRA_DEPTH,
+    INITIAL_KTRA_K_VALUE
 )
 
 from json_manipulator import dump_index
@@ -26,6 +30,8 @@ __all__ = ["create_index", "search"]
 
 
 MAX_FLOAT = float_info.max
+mean = Mean()
+
 
 def get_audio_chunks(pitch_values, include_original_positions=False):
     '''
@@ -292,7 +298,7 @@ def calculate_linear_scaling(query_audio, similar_audio, **kwargs):
         similar_audio
     )
     if distance == 0.0:
-        # Ignore zero distance. (It's likely a noise)
+        # Ignoring zero distance. (It's likely a noise)
         distance = MAX_FLOAT
     return distance
 
@@ -420,6 +426,41 @@ def recursive_align(query_audio, similar_audio, **kwargs):
     return min_distance
 
 
+def mean_substract(pitch_vector):
+    return pitch_vector - mean.compute(pitch_vector)
+
+
+def calculate_ktra(query_audio, similar_audio, **kwargs):
+    depth = kwargs.get('depth')
+
+    if depth == 0:
+        query_audio = mean_substract(query_audio)
+        similar_audio = mean_substract(similar_audio)
+
+    k = kwargs.get('k')
+
+    d_minus = recursive_align(query_audio - k, similar_audio, depth=0)
+    d_zero = recursive_align(query_audio, similar_audio, depth=0)
+    d_plus = recursive_align(query_audio + k, similar_audio, depth=0)
+
+    min_distance = min([d_minus, d_zero, d_plus])
+    if depth < MAX_KTRA_DEPTH:
+        # FIXME: Needs to treat iqual distances?
+        if d_minus == min_distance:
+            query_audio = query_audio - k
+        elif d_plus == min_distance:
+            query_audio = query_audio + k
+
+        min_distance = calculate_ktra(
+            query_audio,
+            similar_audio,
+            k=k / 2,
+            depth=depth + 1
+        )
+
+    return min_distance
+
+
 def apply_matching_algorithm(
     choosed_algorithm, query, similar_audios_indexes, similar_audios, original_positions_mapping
 ):
@@ -427,7 +468,8 @@ def apply_matching_algorithm(
         JACCARD_SIMILARITY: calculate_jaccard_similarity,
         LINEAR_SCALING: calculate_linear_scaling,
         BALS: calculate_bals,
-        RECURSIVE_ALIGNMENT: recursive_align
+        RECURSIVE_ALIGNMENT: recursive_align,
+        KTRA: calculate_ktra
     }
 
     all_queries_distances = {}
@@ -443,7 +485,8 @@ def apply_matching_algorithm(
                 similar_audio,
                 query_audio_name=query_audio_name,
                 original_positions_mapping=original_positions_mapping,
-                depth=0  # For recursive alignment
+                depth=0,  # For recursive alignment and ktra
+                k=INITIAL_KTRA_K_VALUE  # For ktra
             )
             ##
             query_distance[similar_audio_filename] = distance_or_similarity
@@ -458,6 +501,9 @@ def apply_matching_algorithm(
             reverse=reverse_order
         )
         all_queries_distances[query_audio_name] = query_distance
+
+        # print('Stopping earlier for debugging purposes')
+        # break
 
     return all_queries_distances
 
