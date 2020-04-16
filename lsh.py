@@ -286,7 +286,9 @@ def calculate_linear_scaling(query_audio, similar_audio, **kwargs):
         rescaled_query_audio,
         similar_audio
     )
-
+    if distance == 0.0:
+        # Ignore zero distance. (It's likely a noise)
+        distance = MAX_FLOAT
     return distance
 
 
