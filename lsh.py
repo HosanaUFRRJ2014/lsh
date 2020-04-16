@@ -30,6 +30,10 @@ def get_audio_chunks(pitch_values, include_original_positions=False):
     WINDOW_LENGTH = 60
     pitch_vectors = []
     window_start = 0
+
+    # Removes zerors from the start and the beginning of the audio
+    pitch_values = np.trim_zeros(pitch_values)
+
     number_of_windows = len(pitch_values) / (WINDOW_SHIFT)
     number_of_windows = floor(number_of_windows)
     # # positions_in_original_song = []
