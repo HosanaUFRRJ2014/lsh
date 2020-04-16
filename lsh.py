@@ -259,7 +259,14 @@ def calculate_jaccard_similarity(query_audio, similar_audio, **kwargs):
 
 def rescale_audio(query_audio, similar_audio):
     additional_length = similar_audio.size - query_audio.size
-    rescaled_audio = np.append(query_audio, np.zeros(additional_length))
+
+    if additional_length > 0:
+        rescaled_audio = np.append(query_audio, np.zeros(additional_length))
+    elif additional_length < 0:
+        rescaled_audio = query_audio[:similar_audio.size]
+    else:
+        # No need for rescaling
+        rescaled_audio = query_audio
     return rescaled_audio
 
 
