@@ -1,4 +1,5 @@
 # -*-coding:utf8;-*-
+from sys import float_info
 from copy import copy
 import numpy as np
 from math import floor
@@ -13,7 +14,9 @@ from constants import (
     JACCARD_SIMILARITY,
     LINEAR_SCALING,
     BALS,
-    BALS_SHIFT_SIZE
+    BALS_SHIFT_SIZE,
+    RECURSIVE_ALIGNMENT,
+    MAX_RA_DEPTH
 )
 
 from json_manipulator import dump_index
@@ -21,6 +24,8 @@ from json_manipulator import dump_index
 
 __all__ = ["create_index", "search"]
 
+
+MAX_FLOAT = float_info.max
 
 def get_audio_chunks(pitch_values, include_original_positions=False):
     '''
@@ -361,26 +366,84 @@ def calculate_bals(query_audio, similar_audio, **kwargs):
     return nearest_neighbour_distance
 
 
+def percent(part, whole):
+    '''
+    Given a percent and a whole part, calculates its real value.
+    Ex:
+    percent(10, 1000) # Ten percent of a thousand
+    > 100
+    '''
+    return float(whole) / 100 * float(part)
+
+
+def recursive_align(query_audio, similar_audio, **kwargs):
+    min_distance = calculate_linear_scaling(
+        query_audio=query_audio,
+        similar_audio=similar_audio
+    )
+
+    depth = kwargs.get('depth')
+
+    if query_audio.size == 0 or similar_audio.size == 0:
+        raise Exception('size zero detected!!!')
+
+    if depth < MAX_RA_DEPTH:
+        query_size = query_audio.size
+        similar_audio_size = similar_audio.size
+        query_portion_size = int((query_size / 2) + 1)
+        # portion_percents = [10, 20, 30, 40, 50, 60, 70, 80, 90] # Too slow
+        portion_percents = [40, 50, 60]
+        for portion_percent in portion_percents:
+            size = int(
+                percent(portion_percent, similar_audio_size) + 1
+            )
+            complement_size = similar_audio_size + 1 - size
+            left_query_portion = query_audio[:query_portion_size]
+            right_query_portion = query_audio[query_portion_size:]
+            left_similar_portion = similar_audio[:size]
+            right_similar_portion = similar_audio[complement_size:]
+
+            left_distance = recursive_align(
+                left_query_portion,
+                left_similar_portion,
+                depth=depth + 1
+            )
+
+            right_distance = recursive_align(
+                right_query_portion,
+                right_similar_portion,
+                depth=depth + 1
+            )
+
+            min_distance = min([left_distance, right_distance, min_distance])
+
+    return min_distance
+
+
 def apply_matching_algorithm(
     choosed_algorithm, query, similar_audios_indexes, similar_audios, original_positions_mapping
 ):
     matching_algorithms = {
         JACCARD_SIMILARITY: calculate_jaccard_similarity,
         LINEAR_SCALING: calculate_linear_scaling,
-        BALS: calculate_bals
+        BALS: calculate_bals,
+        RECURSIVE_ALIGNMENT: recursive_align
     }
 
     all_queries_distances = {}
     for query_audio_name, query_audio in query:
+        query_audio = np.trim_zeros(query_audio)
         query_distance = dict()
         for audio_index, similar_audio_tuple in zip(similar_audios_indexes, similar_audios):
             similar_audio_filename, similar_audio = similar_audio_tuple
+            similar_audio = np.trim_zeros(similar_audio)
             ##
             distance_or_similarity = matching_algorithms[choosed_algorithm](
                 query_audio,
                 similar_audio,
                 query_audio_name=query_audio_name,
-                original_positions_mapping=original_positions_mapping
+                original_positions_mapping=original_positions_mapping,
+                depth=0  # For recursive alignment
             )
             ##
             query_distance[similar_audio_filename] = distance_or_similarity
