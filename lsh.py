@@ -23,7 +23,7 @@ from constants import (
     INITIAL_KTRA_K_VALUE
 )
 
-from json_manipulator import dump_index
+from json_manipulator import dump_structure, NumpyArrayEncoder
 
 
 __all__ = ["create_index", "search"]
@@ -474,10 +474,12 @@ def apply_matching_algorithm(
 
     all_queries_distances = {}
     for query_audio_name, query_audio in query:
+        query_audio = np.array(query_audio)
         query_audio = np.trim_zeros(query_audio)
         query_distance = dict()
         for audio_index, similar_audio_tuple in zip(similar_audios_indexes, similar_audios):
             similar_audio_filename, similar_audio = similar_audio_tuple
+            similar_audio = np.array(similar_audio)
             similar_audio = np.trim_zeros(similar_audio)
             ##
             distance_or_similarity = matching_algorithms[choosed_algorithm](
@@ -510,24 +512,23 @@ def apply_matching_algorithm(
 
 def create_index(audios_list, num_permutations):
     # Indexing
-    audios = np.array(audios_list)
-    td_matrix, audio_mapping, original_positions_mapping = tokenize(audios)
+    td_matrix, audio_mapping, original_positions_mapping = tokenize(audios_list)
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
-    # Serialize auxiliar index into a file
-    # print()
-    dump_index(audio_mapping, index_name='audio_mapping')
-
-    # Serialize index into a file
-    dump_index(inverted_index, index_name='inverted_index')
-
-    dump_index(original_positions_mapping, index_name='original_positions_mapping')
-
-    # return inverted_index
+    # Serializing indexes
+    indexes_and_indexes_names = [
+        (inverted_index, 'inverted_index'),
+        (audio_mapping, 'audio_mapping'),
+        (original_positions_mapping, 'original_positions_mapping')
+    ]
+    for index, index_name in indexes_and_indexes_names:
+        dump_structure(
+            index,
+            structure_name=index_name
+        )
 
 
 def search(query, inverted_index, songs_list, num_permutations):
-    songs = np.array(songs_list)
     query_td_matrix, _query_audio_mapping, _query_positions_mapping = tokenize(
         query
     )
@@ -535,6 +536,6 @@ def search(query, inverted_index, songs_list, num_permutations):
         query_td_matrix, inverted_index, num_permutations
     )
     similar_audios_indexes = (np.nonzero(similar_audios_count)[0] - 1)
-    similar_songs = songs[similar_audios_indexes]
+    similar_songs = songs_list[similar_audios_indexes]
 
     return similar_audios_indexes, similar_songs

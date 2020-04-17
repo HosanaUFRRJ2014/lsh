@@ -1,8 +1,9 @@
 # -*-coding:utf8;-*-
-import logging
+import numpy as np
 from argparse import ArgumentParser
 from constants import (
     DEFAULT_NUMBER_OF_PERMUTATIONS,
+    SERIALIZE_PITCH_VECTORS,
     CREATE_INDEX,
     SEARCH,
     METHODS,
@@ -10,20 +11,25 @@ from constants import (
     MATCHING_ALGORITHMS
 )
 
-from json_manipulator import load_index
+from json_manipulator import (
+    load_structure,
+    serialize_pitch_vectors,
+    deserialize_songs_pitch_vectors,
+    deserialize_queries_pitch_vectors
+)
 from lsh import (
     apply_matching_algorithm,
     create_index,
     search
 )
-from loader import (
-    load_all_songs_pitch_vectors,
-    load_all_queries_pitch_vectors
-)
+# from loader import (
+#     load_all_songs_pitch_vectors,
+#     load_all_queries_pitch_vectors
+# )
 
 from messages import (
-    invalid_method_msg,
-    has_no_dumped_files_msg
+    log_invalid_method_error,
+    log_no_dumped_files_error
 )
 
 
@@ -80,9 +86,7 @@ def process_args():
 
     is_invalid_method = method_name not in METHODS
     if is_invalid_method:
-        logging.error(
-            invalid_method_msg(method_name)
-        )
+        log_invalid_method_error(method_name)
         exit(1)
 
     return method_name, num_permutations, matching_algorithm
@@ -92,8 +96,9 @@ def main():
     method_name, num_permutations, matching_algorithm = process_args()
 
     load_pitch_vectors = {
-        CREATE_INDEX: load_all_songs_pitch_vectors,
-        SEARCH: load_all_queries_pitch_vectors,
+        SERIALIZE_PITCH_VECTORS: serialize_pitch_vectors,
+        CREATE_INDEX: deserialize_songs_pitch_vectors,
+        SEARCH: deserialize_queries_pitch_vectors,
         # TODO: Search an especific song method (Informing one or more query names)
     }
 
@@ -104,26 +109,27 @@ def main():
         # Creating index
         create_index(pitch_vectors, num_permutations)
     elif method_name == SEARCH:
-        # Loading pitch vectors from audios
-        # TODO: save it already loaded on a file?
+        # Loading pitch vectors from json files
         song_pitch_vectors = load_pitch_vectors[CREATE_INDEX]()
         # Searching songs
         inverted_index = None
         audio_mapping = None
         try:
-            inverted_index = load_index(index_name='inverted_index')
-            audio_mapping = load_index(index_name='audio_mapping')
-            original_positions_mapping = load_index(index_name='original_positions_mapping')
-        except Exception as e:
-            logging.error(e)
-            logging.error(
-                has_no_dumped_files_msg()
+            inverted_index, audio_mapping, original_positions_mapping = (
+                load_structure(structure_name=index_name)
+                for index_name in [
+                    'inverted_index',
+                    'audio_mapping',
+                    'original_positions_mapping'
+                ]
             )
+        except Exception as e:
+            log_no_dumped_files_error(e)
             exit(1)
 
         # Accepts single or multiple queries
-        if not isinstance(pitch_vectors, list):
-            pitch_vectors = [pitch_vectors]
+        if not isinstance(pitch_vectors, np.ndarray):
+            pitch_vectors = np.array(pitch_vectors)
 
         similar_audios_indexes, similar_songs = search(
             query=pitch_vectors,
@@ -131,7 +137,7 @@ def main():
             songs_list=song_pitch_vectors,
             num_permutations=num_permutations
         )
-
+        
         results = apply_matching_algorithm(
             choosed_algorithm=matching_algorithm,
             query=pitch_vectors,

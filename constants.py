@@ -20,9 +20,11 @@ JSON_PATH = 'json_files'
 
 ##
 # Methods
+SERIALIZE_PITCH_VECTORS = 'serialize_pitches'
 CREATE_INDEX = 'create_index'
 SEARCH = 'search'
 METHODS = [
+    SERIALIZE_PITCH_VECTORS,
     CREATE_INDEX,
     SEARCH
 ]

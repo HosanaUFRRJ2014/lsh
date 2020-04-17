@@ -1,22 +1,35 @@
+import logging
 from constants import (
     CREATE_INDEX,
+    SERIALIZE_PITCH_VECTORS,
     METHODS
 )
 
 
-def invalid_method_msg(method_name):
+def log_invalid_method_error(method_name):
     message = "Method '{}' is invalid. Valid methods are: {}".format(
         method_name,
         METHODS
     )
-    return message
+    logging.error(message)
 
 
-def has_no_dumped_files_msg():
+def log_no_dumped_files_error(original_error):
     message = ''.join([
         "ERROR: Couldn't load inverted index or audio mapping. ",
         "Are they dumped as files at all? ",
         "Use method '{}' ".format(CREATE_INDEX),
         "to generate the inverted index and audio mapping first."
     ])
-    return message
+    logging.error(original_error)
+    logging.error(message)
+
+
+def log_no_serialized_pitch_vectors_error(structure_name):
+    message = ''.join([
+        "ERROR: Couldn't load {}. ".format(structure_name),
+        "Use method '{}', to serialize pitch vectors first.".format(
+            SERIALIZE_PITCH_VECTORS
+        )
+    ])
+    logging.error(message)
