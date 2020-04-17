@@ -209,7 +209,7 @@ def search_inverted_index(
     query_td_matrix, inverted_index, permutation_count
 ):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    similar_audios_count = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
+    candidates_count = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT
     num_columns = query_td_matrix.shape[0]  # + 1
 
@@ -239,14 +239,14 @@ def search_inverted_index(
                     try:
                         retrieved_pitch_vector = inverted_index[first_index][second_index]
                         if not isinstance(retrieved_pitch_vector, int):
-                            similar_audios_count[retrieved_pitch_vector] += 1
+                            candidates_count[retrieved_pitch_vector] += 1
                         # print("retrieved pitch vector for fingerprint %d : "%(second_index), retrieved_pitch_vector)
                     except IndexError as e:
                         continue
-    return similar_audios_count
+    return candidates_count
 
 
-def calculate_jaccard_similarity(query_audio, similar_audio, **kwargs):
+def calculate_jaccard_similarity(query_audio, candidate, **kwargs):
     '''
     Jaccard Similarity algorithm in steps:
     1. Get the shared members between both sets, i.e. intersection.
@@ -256,10 +256,10 @@ def calculate_jaccard_similarity(query_audio, similar_audio, **kwargs):
     4. Multiply the found number in (3) by 100.
     '''
     query_chunks = get_audio_chunks(query_audio.tolist())
-    similar_audio_chunks = get_audio_chunks(similar_audio.tolist())
+    candidate_chunks = get_audio_chunks(candidate.tolist())
 
-    intersection = np.intersect1d(similar_audio_chunks, query_chunks)
-    union = np.union1d(similar_audio_chunks, query_chunks)
+    intersection = np.intersect1d(candidate_chunks, query_chunks)
+    union = np.union1d(candidate_chunks, query_chunks)
 
     jaccard_similarity = 0
     if union.size > 0:
@@ -268,34 +268,34 @@ def calculate_jaccard_similarity(query_audio, similar_audio, **kwargs):
     return jaccard_similarity
 
 
-def rescale_audio(query_audio, similar_audio):
-    additional_length = similar_audio.size - query_audio.size
+def rescale_audio(query_audio, candidate):
+    additional_length = candidate.size - query_audio.size
 
     if additional_length > 0:
         rescaled_audio = np.append(query_audio, np.zeros(additional_length))
     elif additional_length < 0:
-        rescaled_audio = query_audio[:similar_audio.size]
+        rescaled_audio = query_audio[:candidate.size]
     else:
         # No need for rescaling
         rescaled_audio = query_audio
     return rescaled_audio
 
 
-def calculate_manhattan_distance(rescaled_query_audio, similar_audio):
+def calculate_manhattan_distance(rescaled_query_audio, candidate):
     result = np.absolute(
-        np.subtract(similar_audio, rescaled_query_audio)
+        np.subtract(candidate, rescaled_query_audio)
     )
     return sum(result)
 
 
-def calculate_linear_scaling(query_audio, similar_audio, **kwargs):
+def calculate_linear_scaling(query_audio, candidate, **kwargs):
     rescaled_query_audio = rescale_audio(
         query_audio,
-        similar_audio
+        candidate
     )
     distance = calculate_manhattan_distance(
         rescaled_query_audio,
-        similar_audio
+        candidate
     )
     if distance == 0.0:
         # Ignoring zero distance. (It's likely a noise)
@@ -305,14 +305,14 @@ def calculate_linear_scaling(query_audio, similar_audio, **kwargs):
 
 def get_candidate_neighbourhood(**kwargs):
     # FIXME: Looks a little bit (or a lot) wrong
-    similar_audio = kwargs.get('similar_audio')
-    similar_audio_name = kwargs.get('similar_audio_name')
+    candidate = kwargs.get('candidate')
+    candidate_name = kwargs.get('candidate_name')
     original_positions_mapping = kwargs.get('original_positions_mapping')
     neighbours = []
-    # pitch_position_and_vectors = original_positions_mapping.get(similar_audio_name)
+    # pitch_position_and_vectors = original_positions_mapping.get(candidate_name)
     # print('get_candidate_neighbourhood NOT IMPLEMENTED YET!!!!')
 
-    # audio_chunks = get_audio_chunks(similar_audio)
+    # audio_chunks = get_audio_chunks(candidate)
     # for chunk in audio_chunks:
     #     dumped_term = _dump_term(chunk)
     #     corresponding = list(
@@ -326,15 +326,15 @@ def get_candidate_neighbourhood(**kwargs):
 
     # Apply shift, shorthen, lengthen operations
     # Left moved vector
-    left_moved_vector = shift(similar_audio, BALS_SHIFT_SIZE)
+    left_moved_vector = shift(candidate, BALS_SHIFT_SIZE)
     # Right moved vector
-    right_moved_vector = shift(similar_audio, -BALS_SHIFT_SIZE)
+    right_moved_vector = shift(candidate, -BALS_SHIFT_SIZE)
     # TODO: Left shortened vector
     # TODO: Right shortened vector
     # Left lenghtened vector
-    left_lenghtened = shift(similar_audio, BALS_SHIFT_SIZE, mode='nearest')
+    left_lenghtened = shift(candidate, BALS_SHIFT_SIZE, mode='nearest')
     # Right lenghtened vector
-    right_lenghtened = shift(similar_audio, -BALS_SHIFT_SIZE, mode='nearest')
+    right_lenghtened = shift(candidate, -BALS_SHIFT_SIZE, mode='nearest')
 
     # Tem algo que parece não estar certo... É para aplicar as operações sobre
     # cada trecho do áudio candidato ou sobre ele como um todo? Ou ainda,
@@ -349,7 +349,7 @@ def get_candidate_neighbourhood(**kwargs):
     return neighbours
 
 
-def calculate_bals(query_audio, similar_audio, **kwargs):
+def calculate_bals(query_audio, candidate, **kwargs):
     '''
     Explore candidates neighbourhood
        - For each candidate, lenghten or shorten it.
@@ -357,13 +357,13 @@ def calculate_bals(query_audio, similar_audio, **kwargs):
     Retain the fragment with the shortest distance.
     '''
     # FIXME: It's rescaling the same query several times
-    similar_audio_distance = calculate_linear_scaling(query_audio, similar_audio)
+    candidate_distance = calculate_linear_scaling(query_audio, candidate)
 
-    kwargs['similar_audio'] = similar_audio
+    kwargs['candidate'] = candidate
 
     neighbours = get_candidate_neighbourhood(**kwargs)
     # Starts with the similar audio
-    nearest_neighbour_distance = similar_audio_distance
+    nearest_neighbour_distance = candidate_distance
     for neighbour in neighbours:
         distance = calculate_linear_scaling(query_audio, neighbour)
         if distance < nearest_neighbour_distance:
@@ -382,32 +382,32 @@ def percent(part, whole):
     return float(whole) / 100 * float(part)
 
 
-def recursive_align(query_audio, similar_audio, **kwargs):
+def recursive_align(query_audio, candidate, **kwargs):
     min_distance = calculate_linear_scaling(
         query_audio=query_audio,
-        similar_audio=similar_audio
+        candidate=candidate
     )
 
     depth = kwargs.get('depth')
 
-    if query_audio.size == 0 or similar_audio.size == 0:
+    if query_audio.size == 0 or candidate.size == 0:
         raise Exception('size zero detected!!!')
 
     if depth < MAX_RA_DEPTH:
         query_size = query_audio.size
-        similar_audio_size = similar_audio.size
+        candidate_size = candidate.size
         query_portion_size = int((query_size / 2) + 1)
         # portion_percents = [10, 20, 30, 40, 50, 60, 70, 80, 90] # Too slow
         portion_percents = [40, 50, 60]
         for portion_percent in portion_percents:
             size = int(
-                percent(portion_percent, similar_audio_size) + 1
+                percent(portion_percent, candidate_size) + 1
             )
-            complement_size = similar_audio_size + 1 - size
+            complement_size = candidate_size + 1 - size
             left_query_portion = query_audio[:query_portion_size]
             right_query_portion = query_audio[query_portion_size:]
-            left_similar_portion = similar_audio[:size]
-            right_similar_portion = similar_audio[complement_size:]
+            left_similar_portion = candidate[:size]
+            right_similar_portion = candidate[complement_size:]
 
             left_distance = recursive_align(
                 left_query_portion,
@@ -430,18 +430,18 @@ def mean_substract(pitch_vector):
     return pitch_vector - mean.compute(pitch_vector)
 
 
-def calculate_ktra(query_audio, similar_audio, **kwargs):
+def calculate_ktra(query_audio, candidate, **kwargs):
     depth = kwargs.get('depth')
 
     if depth == 0:
         query_audio = mean_substract(query_audio)
-        similar_audio = mean_substract(similar_audio)
+        candidate = mean_substract(candidate)
 
     k = kwargs.get('k')
 
-    d_minus = recursive_align(query_audio - k, similar_audio, depth=0)
-    d_zero = recursive_align(query_audio, similar_audio, depth=0)
-    d_plus = recursive_align(query_audio + k, similar_audio, depth=0)
+    d_minus = recursive_align(query_audio - k, candidate, depth=0)
+    d_zero = recursive_align(query_audio, candidate, depth=0)
+    d_plus = recursive_align(query_audio + k, candidate, depth=0)
 
     min_distance = min([d_minus, d_zero, d_plus])
     if depth < MAX_KTRA_DEPTH:
@@ -453,7 +453,7 @@ def calculate_ktra(query_audio, similar_audio, **kwargs):
 
         min_distance = calculate_ktra(
             query_audio,
-            similar_audio,
+            candidate,
             k=k / 2,
             depth=depth + 1
         )
@@ -462,7 +462,7 @@ def calculate_ktra(query_audio, similar_audio, **kwargs):
 
 
 def apply_matching_algorithm(
-    choosed_algorithm, query, similar_audios_indexes, similar_audios, original_positions_mapping
+    choosed_algorithm, query, candidates_indexes, candidates, original_positions_mapping
 ):
     matching_algorithms = {
         JACCARD_SIMILARITY: calculate_jaccard_similarity,
@@ -477,21 +477,21 @@ def apply_matching_algorithm(
         query_audio = np.array(query_audio)
         query_audio = np.trim_zeros(query_audio)
         query_distance = dict()
-        for audio_index, similar_audio_tuple in zip(similar_audios_indexes, similar_audios):
-            similar_audio_filename, similar_audio = similar_audio_tuple
-            similar_audio = np.array(similar_audio)
-            similar_audio = np.trim_zeros(similar_audio)
+        for audio_index, candidate_tuple in zip(candidates_indexes, candidates):
+            candidate_filename, candidate = candidate_tuple
+            candidate = np.array(candidate)
+            candidate = np.trim_zeros(candidate)
             ##
             distance_or_similarity = matching_algorithms[choosed_algorithm](
                 query_audio,
-                similar_audio,
+                candidate,
                 query_audio_name=query_audio_name,
                 original_positions_mapping=original_positions_mapping,
                 depth=0,  # For recursive alignment and ktra
                 k=INITIAL_KTRA_K_VALUE  # For ktra
             )
             ##
-            query_distance[similar_audio_filename] = distance_or_similarity
+            query_distance[candidate_filename] = distance_or_similarity
 
         reverse_order = False
         if choosed_algorithm == JACCARD_SIMILARITY:
@@ -532,10 +532,10 @@ def search(query, inverted_index, songs_list, num_permutations):
     query_td_matrix, _query_audio_mapping, _query_positions_mapping = tokenize(
         query
     )
-    similar_audios_count = search_inverted_index(
+    candidates_count = search_inverted_index(
         query_td_matrix, inverted_index, num_permutations
     )
-    similar_audios_indexes = (np.nonzero(similar_audios_count)[0] - 1)
-    similar_songs = songs_list[similar_audios_indexes]
+    candidates_indexes = (np.nonzero(candidates_count)[0] - 1)
+    similar_songs = songs_list[candidates_indexes]
 
-    return similar_audios_indexes, similar_songs
+    return candidates_indexes, similar_songs
