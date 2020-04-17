@@ -70,41 +70,41 @@ def _get_index(permutation_number, selecion_function_code=0):
     return permutation_number * (SELECTION_FUNCTION_COUNT) + selecion_function_code
 
 
-def _dump_term(term):
-    return ''.join(str(p) for p in term)
+def _dump_piece(piece):
+    return ''.join(str(p) for p in piece)
 
 
-def _vocab_index(term, vocabulary):
+def _vocab_index(piece, vocabulary):
     # TODO: Does it need to take all the pitch vector to be the key?
-    # dumped_term = term
-    # copied = set([int(p) for p in term])
+    # dumped_piece = piece
+    # copied = set([int(p) for p in piece])
     # copied = sorted(copied)
 
     # vector_size = int(len(copied) / 4)
     # vector_size = len(copied)
-    dumped_term = _dump_term(term)
-    # dumped_term = ''.join(str(int(p)) for p in term)
+    dumped_piece = _dump_piece(piece)
+    # dumped_piece = ''.join(str(int(p)) for p in piece)
 
-    if dumped_term not in vocabulary.keys():
-        vocabulary[dumped_term] = len(vocabulary) + 1
+    if dumped_piece not in vocabulary.keys():
+        vocabulary[dumped_piece] = len(vocabulary) + 1
 
-    return vocabulary[dumped_term], dumped_term
+    return vocabulary[dumped_piece], dumped_piece
 
 
-def _audio_mapping_index(dumped_term, audio_map, filename):
-    if dumped_term not in audio_map.keys():
-        audio_map[dumped_term] = np.array([])
-    audio_map[dumped_term] = np.union1d(audio_map[dumped_term], filename)
+def _audio_mapping_index(dumped_piece, audio_map, filename):
+    if dumped_piece not in audio_map.keys():
+        audio_map[dumped_piece] = np.array([])
+    audio_map[dumped_piece] = np.union1d(audio_map[dumped_piece], filename)
     return audio_map
 
 
-def _original_position_index(dumped_term, orig_pos_map, original_pos, filename):
+def _original_position_index(dumped_piece, orig_pos_map, original_pos, filename):
     '''
-    For a given filename, stores its dumped terms and their original positions.
+    For a given filename, stores its dumped pieces and their original positions.
     '''
     if filename not in orig_pos_map.keys():
         orig_pos_map[filename] = np.array([])
-    tuple_of_infos = (dumped_term, original_pos)
+    tuple_of_infos = (dumped_piece, original_pos)
     orig_pos_map[filename] = np.union1d(orig_pos_map[filename], tuple_of_infos)
 
     return orig_pos_map
@@ -118,24 +118,24 @@ def tokenize(audios):
     td_matrix_temp = []
     audios_length = len(audios)
     for i in range(audios_length):
-        di_terms = []
+        di_pieces = []
         filename, audio = audios[i]
         audio_chunks, original_positions = get_audio_chunks(
             audio,
             include_original_positions=True
         )
-        for audio_chunk_index, termj in enumerate(audio_chunks):
-            index, dumped_term = _vocab_index(termj, vocabulary)
-            di_terms.append(index)
-            audio_map = _audio_mapping_index(dumped_term, audio_map, filename)
+        for audio_chunk_index, piecej in enumerate(audio_chunks):
+            index, dumped_piece = _vocab_index(piecej, vocabulary)
+            di_pieces.append(index)
+            audio_map = _audio_mapping_index(dumped_piece, audio_map, filename)
             orig_pos_map = _original_position_index(
-                dumped_term,
+                dumped_piece,
                 orig_pos_map,
                 audio_chunk_index,
                 filename
             )
-        td_matrix_temp.append(di_terms)
-        di_terms = None
+        td_matrix_temp.append(di_pieces)
+        di_pieces = None
     td_matrix = np.zeros([len(vocabulary), audios_length])
 
     for i in range(audios_length):
@@ -314,10 +314,10 @@ def get_candidate_neighbourhood(**kwargs):
 
     # audio_chunks = get_audio_chunks(candidate)
     # for chunk in audio_chunks:
-    #     dumped_term = _dump_term(chunk)
+    #     dumped_piece = _dump_piece(chunk)
     #     corresponding = list(
     #         filter(
-    #             lambda: position_and_vector: (position_and_vector[1] == dumped_term),
+    #             lambda: position_and_vector: (position_and_vector[1] == dumped_piece),
     #             pitch_position_and_vectors
     #         )
     #     )[0]
