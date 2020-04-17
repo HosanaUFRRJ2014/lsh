@@ -3,6 +3,7 @@ from essentia.standard import (
     EqloudLoader,
     PredominantPitchMelodia
 )
+import numpy as np
 from constants import (
     FILENAMES_OF_SONGS,
     PATH_TO_DATASET,
@@ -43,16 +44,27 @@ def _extract_pitch_vector(audio):
     return pitch_values
 
 
+def _load_audio_pitch_vector(audio_path):
+    audio = _load_audio(audio_path)
+    pitch_vector = _extract_pitch_vector(audio)
+    return audio_path, pitch_vector
+
+
 def _load_all_audio_pitch_vectors(filenames_file, path):
     pitch_vectors = []
     audios_paths = _read_dataset_names(filenames_file, path)
     for audio_path in audios_paths[:16]:
         print('path: ', audio_path)
-        audio = _load_audio(audio_path)
-        pitch_vector = _extract_pitch_vector(audio)
-        pitch_vectors.append((audio_path, pitch_vector))
+        pitch_vectors.append(
+            _load_audio_pitch_vector(audio_path)
+        )
 
     return pitch_vectors
+
+
+def load_song_pitch_vector(audio_path):
+    returned_tuple = _load_audio_pitch_vector(audio_path)
+    return np.array([returned_tuple])
 
 
 def load_all_songs_pitch_vectors():

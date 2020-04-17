@@ -6,6 +6,8 @@ from constants import (
     SERIALIZE_PITCH_VECTORS,
     CREATE_INDEX,
     SEARCH,
+    SEARCH_ALL,
+    SEARCH_METHODS,
     METHODS,
     LINEAR_SCALING,
     MATCHING_ALGORITHMS
@@ -22,10 +24,9 @@ from lsh import (
     create_index,
     search
 )
-# from loader import (
-#     load_all_songs_pitch_vectors,
-#     load_all_queries_pitch_vectors
-# )
+from loader import (
+    load_song_pitch_vector
+)
 
 from messages import (
     log_invalid_method_error,
@@ -62,6 +63,13 @@ def process_args():
         )
     )
     parser.add_argument(
+        "--song_filename",
+        "-f",
+        type=str,
+        help="Filename for a song to search. NOTE: Loads song pitches",
+        default=''
+    )
+    parser.add_argument(
         "--number_of_permutations",
         "-np",
         type=int,
@@ -72,7 +80,9 @@ def process_args():
         "--matching_algorithm",
         "-ma",
         type=str,
-        help="It's expected to be informed alongside '{}' method. ".format(SEARCH) +
+        help="It's expected to be informed alongside {} methods. ".format(
+            SEARCH_METHODS
+        ) +
         "Options: {}. Defaults to {}".format(
             ', '.join(MATCHING_ALGORITHMS),
             LINEAR_SCALING
@@ -82,6 +92,7 @@ def process_args():
     args = parser.parse_args()
     num_permutations = args.number_of_permutations
     method_name = args.method
+    song_filename = args.song_filename
     matching_algorithm = args.matching_algorithm
 
     is_invalid_method = method_name not in METHODS
@@ -89,26 +100,30 @@ def process_args():
         log_invalid_method_error(method_name)
         exit(1)
 
-    return method_name, num_permutations, matching_algorithm
+    return method_name, song_filename, num_permutations, matching_algorithm
 
 
 def main():
-    method_name, num_permutations, matching_algorithm = process_args()
+    method_name, song_filename, num_permutations, matching_algorithm = process_args()
 
     load_pitch_vectors = {
         SERIALIZE_PITCH_VECTORS: serialize_pitch_vectors,
         CREATE_INDEX: deserialize_songs_pitch_vectors,
-        SEARCH: deserialize_queries_pitch_vectors,
-        # TODO: Search an especific song method (Informing one or more query names)
+        SEARCH_ALL: deserialize_queries_pitch_vectors,
+        SEARCH: load_song_pitch_vector
     }
 
     # Loading pitch vectors from audios
-    pitch_vectors = load_pitch_vectors[method_name]()
+    # FIXME: Poor code
+    if method_name == SEARCH:
+        pitch_vectors = load_pitch_vectors[method_name](song_filename)
+    else:
+        pitch_vectors = load_pitch_vectors[method_name]()
 
     if method_name == CREATE_INDEX:
         # Creating index
         create_index(pitch_vectors, num_permutations)
-    elif method_name == SEARCH:
+    elif method_name in SEARCH_METHODS:
         # Loading pitch vectors from json files
         song_pitch_vectors = load_pitch_vectors[CREATE_INDEX]()
         # Searching songs
@@ -127,17 +142,13 @@ def main():
             log_no_dumped_files_error(e)
             exit(1)
 
-        # Accepts single or multiple queries
-        if not isinstance(pitch_vectors, np.ndarray):
-            pitch_vectors = np.array(pitch_vectors)
-
         similar_audios_indexes, similar_songs = search(
             query=pitch_vectors,
             inverted_index=inverted_index,
             songs_list=song_pitch_vectors,
             num_permutations=num_permutations
         )
-        
+
         results = apply_matching_algorithm(
             choosed_algorithm=matching_algorithm,
             query=pitch_vectors,

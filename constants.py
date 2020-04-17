@@ -22,12 +22,16 @@ JSON_PATH = 'json_files'
 # Methods
 SERIALIZE_PITCH_VECTORS = 'serialize_pitches'
 CREATE_INDEX = 'create_index'
+SEARCH_ALL = 'search_all'
 SEARCH = 'search'
+SEARCH_METHODS = [
+    SEARCH,
+    SEARCH_ALL
+]
 METHODS = [
     SERIALIZE_PITCH_VECTORS,
     CREATE_INDEX,
-    SEARCH
-]
+] + SEARCH_METHODS
 
 ##
 # Matching Algorithms
