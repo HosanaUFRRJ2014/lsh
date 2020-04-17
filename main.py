@@ -142,7 +142,7 @@ def main():
             log_no_dumped_files_error(e)
             exit(1)
 
-        candidates_indexes, similar_songs = search(
+        candidates_indexes, candidates = search(
             query=pitch_vectors,
             inverted_index=inverted_index,
             songs_list=song_pitch_vectors,
@@ -153,7 +153,7 @@ def main():
             choosed_algorithm=matching_algorithm,
             query=pitch_vectors,
             candidates_indexes=candidates_indexes,
-            candidates=similar_songs,
+            candidates=candidates,
             original_positions_mapping=original_positions_mapping
         )
         print_results(matching_algorithm, results)

@@ -536,6 +536,6 @@ def search(query, inverted_index, songs_list, num_permutations):
         query_td_matrix, inverted_index, num_permutations
     )
     candidates_indexes = (np.nonzero(candidates_count)[0] - 1)
-    similar_songs = songs_list[candidates_indexes]
+    candidates = songs_list[candidates_indexes]
 
-    return candidates_indexes, similar_songs
+    return candidates_indexes, candidates
