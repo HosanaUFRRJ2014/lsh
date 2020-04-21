@@ -2,8 +2,17 @@ import logging
 from constants import (
     CREATE_INDEX,
     SERIALIZE_PITCH_VECTORS,
+    MATCHING_ALGORITHMS,
     METHODS
 )
+
+
+def log_invalid_matching_algorithm_error(matching_algorithm):
+    message = "Matching Algorithm '{}' is invalid. Valid algorithms are: {}".format(
+        matching_algorithm,
+        MATCHING_ALGORITHMS
+    )
+    logging.error(message)
 
 
 def log_invalid_method_error(method_name):

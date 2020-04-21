@@ -29,6 +29,7 @@ from loader import (
 )
 
 from messages import (
+    log_invalid_matching_algorithm_error,
     log_invalid_method_error,
     log_no_dumped_files_error
 )
@@ -95,9 +96,13 @@ def process_args():
     song_filename = args.song_filename
     matching_algorithm = args.matching_algorithm
 
-    is_invalid_method = method_name not in METHODS
-    if is_invalid_method:
+    invalid_method = method_name not in METHODS
+    if invalid_method:
         log_invalid_method_error(method_name)
+        exit(1)
+    invalid_matching_algorithm = matching_algorithm not in MATCHING_ALGORITHMS
+    if invalid_matching_algorithm:
+        log_invalid_matching_algorithm_error(matching_algorithm)
         exit(1)
 
     return method_name, song_filename, num_permutations, matching_algorithm
