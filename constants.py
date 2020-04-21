@@ -35,7 +35,7 @@ METHODS = [
 
 ##
 # Matching Algorithms
-JACCARD_SIMILARITY = 'jaccard_similarity'
+JACCARD_SIMILARITY = 'jacs'
 LINEAR_SCALING = 'ls'
 BALS = 'bals'
 RECURSIVE_ALIGNMENT = 'ra'
