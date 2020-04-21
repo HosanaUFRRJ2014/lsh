@@ -4,3 +4,5 @@
 \.vscode/\.ropeproject/objectdb
 
 __pycache__/
+
+json_files/
