@@ -53,7 +53,7 @@ def _load_audio_pitch_vector(audio_path):
 def _load_all_audio_pitch_vectors(filenames_file, path):
     pitch_vectors = []
     audios_paths = _read_dataset_names(filenames_file, path)
-    for audio_path in audios_paths[:16]:
+    for audio_path in audios_paths[:100]:
         print('path: ', audio_path)
         pitch_vectors.append(
             _load_audio_pitch_vector(audio_path)
