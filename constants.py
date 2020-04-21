@@ -1,4 +1,7 @@
 DEFAULT_NUMBER_OF_PERMUTATIONS = 1000
+# Limits the max number of results to display
+SHOW_TOP_X = 20
+
 
 SELECTION_FUNCTIONS = [
     min,

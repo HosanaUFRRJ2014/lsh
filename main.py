@@ -10,7 +10,8 @@ from constants import (
     SEARCH_METHODS,
     METHODS,
     LINEAR_SCALING,
-    MATCHING_ALGORITHMS
+    MATCHING_ALGORITHMS,
+    SHOW_TOP_X
 )
 
 from json_manipulator import (
@@ -35,12 +36,13 @@ from messages import (
 )
 
 
-def print_results(matching_algorithm, results):
+def print_results(matching_algorithm, results, show_top_x):
     print('Results found by ', matching_algorithm)
     for result_name, result in results.items():
         print('Query: ', result_name)
         print('Results:')
-        for position, r in enumerate(result, start=1):
+        bounded_result = result[:show_top_x]
+        for position, r in enumerate(bounded_result, start=1):
             print('\t{:03}. {}'.format(position, r))
 
 
@@ -78,6 +80,15 @@ def process_args():
         default=DEFAULT_NUMBER_OF_PERMUTATIONS
     )
     parser.add_argument(
+        "--show_top",
+        "-top",
+        type=int,
+        help="Shows top X results. Defaults to {}.".format(
+            SHOW_TOP_X
+        ),
+        default=SHOW_TOP_X
+    )
+    parser.add_argument(
         "--matching_algorithm",
         "-ma",
         type=str,
@@ -95,6 +106,7 @@ def process_args():
     method_name = args.method
     song_filename = args.song_filename
     matching_algorithm = args.matching_algorithm
+    show_top_x = args.show_top
 
     invalid_method = method_name not in METHODS
     if invalid_method:
@@ -105,11 +117,12 @@ def process_args():
         log_invalid_matching_algorithm_error(matching_algorithm)
         exit(1)
 
-    return method_name, song_filename, num_permutations, matching_algorithm
+
+    return method_name, song_filename, num_permutations, matching_algorithm, show_top_x
 
 
 def main():
-    method_name, song_filename, num_permutations, matching_algorithm = process_args()
+    method_name, song_filename, num_permutations, matching_algorithm, show_top_x = process_args()
 
     load_pitch_vectors = {
         SERIALIZE_PITCH_VECTORS: serialize_pitch_vectors,
@@ -161,7 +174,7 @@ def main():
             candidates=candidates,
             original_positions_mapping=original_positions_mapping
         )
-        print_results(matching_algorithm, results)
+        print_results(matching_algorithm, results, show_top_x)
 
 
 if __name__ == '__main__':
