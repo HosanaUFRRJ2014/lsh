@@ -9,7 +9,8 @@ from constants import (
     PATH_TO_DATASET,
     WAV_SONGS_PATH,
     FILENAMES_OF_QUERIES,
-    QUERIES_PATH
+    QUERIES_PATH,
+    EXPECTED_RESULTS
 )
 
 Extractor = MusicExtractor()
@@ -17,14 +18,41 @@ Extractor = MusicExtractor()
 __all__ = ["load_all_songs_pitch_vectors", "load_all_queries_pitch_vectors"]
 
 
+def _format_path(name, audio_path=None):
+    if audio_path:
+        formatted = '{}/{}/{}'.format(
+            PATH_TO_DATASET, audio_path, name.rstrip('\n')
+        )
+    else:
+        formatted = '{}/{}'.format(
+            PATH_TO_DATASET, name.rstrip('\n')
+        )
+    return formatted
+
+
 def _read_dataset_names(path, audio_path):
     filenames_file = open(path, 'r')
+
     paths = [
-        '{}/{}/{}'.format(PATH_TO_DATASET, audio_path, name.rstrip('\n'))
+        _format_path(name, audio_path=audio_path)
         for name in filenames_file.readlines()
     ]
     filenames_file.close()
     return paths
+
+
+def _read_expected_results(filename):
+    results_file = open(filename, 'r')
+    results_list = results_file.readlines()
+    results_mapping = {}
+    for result in results_list:
+        query_path, song_name = result.split('\t')
+        query = _format_path(query_path)
+        song_name = song_name.replace('\n', '.wav')
+        song = _format_path(song_name, audio_path=WAV_SONGS_PATH)
+        results_mapping[query] = song
+
+    return results_mapping
 
 
 def _load_audio(filepath):
@@ -73,3 +101,11 @@ def load_all_songs_pitch_vectors():
 
 def load_all_queries_pitch_vectors():
     return _load_all_audio_pitch_vectors(FILENAMES_OF_QUERIES, QUERIES_PATH)
+
+
+def load_expected_results():
+    '''
+    Maps each query into its expected result.
+    '''
+    results_mapping = _read_expected_results(EXPECTED_RESULTS)
+    return results_mapping

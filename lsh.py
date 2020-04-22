@@ -24,7 +24,7 @@ from constants import (
 )
 
 from json_manipulator import dump_structure, NumpyArrayEncoder
-
+from loader import load_expected_results
 
 __all__ = ["create_index", "search"]
 
@@ -508,6 +508,31 @@ def apply_matching_algorithm(
         # break
 
     return all_queries_distances
+
+
+def calculate_mean_reciprocal_rank(all_queries_distances, show_top_x):
+    '''
+    Rank results found by apply_matching_algorithm and applies Mean Reciproval
+    Rank (MRR).
+    '''
+    results_mapping = load_expected_results()
+    reciprocal_ranks = []
+    number_of_queries = len(all_queries_distances.keys())
+    for query_name, results in all_queries_distances.items():
+        # bounded_results = results[:show_top_x]
+        correct_result = results_mapping[query_name]
+        # TODO: É realmente sobre todo o dataset? Se não for, ver o que fazer
+        # quando o resultado não estiver no bounded_results
+        # 'results' is a list of tuples (song_name, distance) 
+        candidates_names = [result[0] for result in results]
+        correct_result_index = candidates_names.index(correct_result)
+        rank = correct_result_index + 1
+        reciprocal_rank = 1 / rank
+        reciprocal_ranks.append(reciprocal_rank)
+
+    mean_reciprocal_rank = sum(reciprocal_ranks) / number_of_queries
+
+    return mean_reciprocal_rank
 
 
 def create_index(audios_list, num_permutations):

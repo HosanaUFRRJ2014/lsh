@@ -18,6 +18,8 @@ WAV_SONGS_PATH = 'songs_wav'
 FILENAMES_OF_QUERIES = '{}/{}'.format(PATH_TO_DATASET, 'queries.list')
 QUERIES_PATH = 'queries'
 
+EXPECTED_RESULTS = '{}/{}'.format(PATH_TO_DATASET, 'expected_results.list')
+
 # Path where dumped json files, such as inverted index and audio mapping, are.
 JSON_PATH = 'json_files'
 

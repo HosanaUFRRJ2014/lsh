@@ -23,10 +23,12 @@ from json_manipulator import (
 from lsh import (
     apply_matching_algorithm,
     create_index,
-    search
+    search,
+    calculate_mean_reciprocal_rank
 )
 from loader import (
-    load_song_pitch_vector
+    load_song_pitch_vector,
+    load_expected_results
 )
 
 from messages import (
@@ -38,8 +40,8 @@ from messages import (
 
 def print_results(matching_algorithm, results, show_top_x):
     print('Results found by ', matching_algorithm)
-    for result_name, result in results.items():
-        print('Query: ', result_name)
+    for query_name, result in results.items():
+        print('Query: ', query_name)
         print('Results:')
         bounded_result = result[:show_top_x]
         for position, r in enumerate(bounded_result, start=1):
@@ -117,7 +119,6 @@ def process_args():
         log_invalid_matching_algorithm_error(matching_algorithm)
         exit(1)
 
-
     return method_name, song_filename, num_permutations, matching_algorithm, show_top_x
 
 
@@ -175,6 +176,9 @@ def main():
             original_positions_mapping=original_positions_mapping
         )
         print_results(matching_algorithm, results, show_top_x)
+        mrr = calculate_mean_reciprocal_rank(results, show_top_x)
+
+        print('Mean Reciprocal Ranking (MRR): ', mrr)
 
 
 if __name__ == '__main__':
