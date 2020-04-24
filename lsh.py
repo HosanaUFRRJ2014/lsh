@@ -259,39 +259,72 @@ def calculate_jaccard_similarity(query_audio, candidate, **kwargs):
     return jaccard_similarity
 
 
-def rescale_audio(query_audio, candidate):
-    additional_length = candidate.size - query_audio.size
+def rescale_audio(query_audio):
+    # ------------------[0.5, 0.75, 1.0, 1.25, 1.5]
+    scaling_factors = ((1, 2), (3, 4), (1, 1), (5, 4), (3, 2))
+    original_len = query_audio.size
+    rescaled_audios = []
+    for numerator, denominator in scaling_factors:
+        rescaled_audio = np.array([])
+        scaling_factor = numerator / denominator
+        if scaling_factor == 1.0:
+            rescaled_audio = np.copy(query_audio)
+        else:
+            # Shorten or lenghten audio
+            numerator, denominator = scaling_factor.as_integer_ratio()
+            for i in range(0, original_len, denominator):
+                chunck = query_audio[i:i + denominator]
+                if scaling_factor > 1.0:
+                    # Lenghten audio
+                    # Note: only works for 1.25 (5,4) and 1.5 (3,2)
+                    repeated = chunck[-1]
+                    chunck = np.append(chunck, repeated)
+                rescaled_audio = np.append(rescaled_audio, chunck[:numerator])
+        rescaled_audios.append(rescaled_audio)
 
+    return rescaled_audios
+
+
+def calculate_manhattan_distance(rescaled_audio, candidate):
+    additional_length = candidate.size - rescaled_audio.size
+
+    # Equalize size
     if additional_length > 0:
-        rescaled_audio = np.append(query_audio, np.zeros(additional_length))
+        rescaled_audio = np.append(rescaled_audio, np.zeros(additional_length))
     elif additional_length < 0:
-        rescaled_audio = query_audio[:candidate.size]
-    else:
-        # No need for rescaling
-        rescaled_audio = query_audio
-    return rescaled_audio
+        rescaled_audio = rescaled_audio[:candidate.size]
 
-
-def calculate_manhattan_distance(rescaled_query_audio, candidate):
+    # Calculate distance
     result = np.absolute(
-        np.subtract(candidate, rescaled_query_audio)
+        np.subtract(candidate, rescaled_audio)
     )
     return sum(result)
 
 
-def calculate_linear_scaling(query_audio, candidate, **kwargs):
-    rescaled_query_audio = rescale_audio(
-        query_audio,
-        candidate
-    )
-    distance = calculate_manhattan_distance(
-        rescaled_query_audio,
-        candidate
-    )
-    if distance == 0.0:
+def calculate_linear_scaling(
+    rescaled_query_audios, candidate, **kwargs
+):
+    '''
+    Implemented as explained in "Query-By-Singing-and-Hummimg" from CHIAO-WEI
+    LIN.
+    '''
+    include_zero_distance = kwargs.get('include_zero_distance')
+    if not isinstance(rescaled_query_audios, list):
+        rescaled_query_audios = [rescaled_query_audios]
+    distances = []
+    for rescaled_query_audio in rescaled_query_audios:
+        distance = calculate_manhattan_distance(
+            rescaled_query_audio,
+            candidate
+        )
+        if distance > 0.0 or include_zero_distance:
+            distances.append(distance)
+    if not distance:
         # Ignoring zero distance. (It's likely a noise)
-        distance = MAX_FLOAT
-    return distance
+        min_distance = MAX_FLOAT
+    else:
+        min_distance = min(distances)
+    return min_distance
 
 
 def get_candidate_neighbourhood(**kwargs):
@@ -325,15 +358,16 @@ def get_candidate_neighbourhood(**kwargs):
     return neighbours
 
 
-def calculate_bals(query_audio, candidate, **kwargs):
+def calculate_bals(rescaled_query_audios, candidate, **kwargs):
     '''
     Explore candidates neighbourhood
        - For each candidate, lenghten or shorten it.
     For each neighbor, measure LS distance.
     Retain the fragment with the shortest distance.
     '''
-    # FIXME: It's rescaling the same query several times
-    candidate_distance = calculate_linear_scaling(query_audio, candidate)
+    candidate_distance = calculate_linear_scaling(
+        rescaled_query_audios, candidate, include_zero_distance=True
+    )
 
     kwargs['candidate'] = candidate
 
@@ -341,7 +375,11 @@ def calculate_bals(query_audio, candidate, **kwargs):
     # Starts with the similar audio
     nearest_neighbour_distance = candidate_distance
     for neighbour in neighbours:
-        distance = calculate_linear_scaling(query_audio, neighbour)
+        distance = calculate_linear_scaling(
+            rescaled_query_audios,
+            neighbour,
+            include_zero_distance=True
+        )
         if distance < nearest_neighbour_distance:
             nearest_neighbour_distance = distance
 
@@ -359,9 +397,11 @@ def percent(part, whole):
 
 
 def recursive_align(query_audio, candidate, **kwargs):
+    # Compute the linear distance of the corresponding part
     min_distance = calculate_linear_scaling(
-        query_audio=query_audio,
-        candidate=candidate
+        query_audio,
+        candidate=candidate,
+        include_zero_distance=False
     )
 
     depth = kwargs.get('depth')
@@ -453,15 +493,21 @@ def apply_matching_algorithm(
         query_audio = np.array(query_audio)
         query_audio = np.trim_zeros(query_audio)
         query_distance = dict()
+        if choosed_algorithm in [LINEAR_SCALING, BALS]:
+            # Rescaling here to optmize time consumption
+            rescaled_query_audios = rescale_audio(query_audio)
+        else:
+            rescaled_query_audios = [query_audio]
         for audio_index, candidate_tuple in zip(candidates_indexes, candidates):
             candidate_filename, candidate = candidate_tuple
             candidate = np.array(candidate)
             candidate = np.trim_zeros(candidate)
             ##
             distance_or_similarity = matching_algorithms[choosed_algorithm](
-                query_audio,
+                rescaled_query_audios,  # not an array for jaccard
                 candidate,
                 query_audio_name=query_audio_name,
+                include_zero_distance=True,  # For LS and BALS
                 original_positions_mapping=original_positions_mapping,
                 depth=0,  # For recursive alignment and ktra
                 k=INITIAL_KTRA_K_VALUE  # For ktra
