@@ -9,9 +9,6 @@ from loader import (
 from messages import log_no_serialized_pitch_vectors_error
 
 
-# TODO: Implement ComplexEncoder, once I doubt numpy array will be serialized
-# in an easy way!
-# Scratch, but will be more complex, once there is inner numpy arrays
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):

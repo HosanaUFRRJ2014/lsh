@@ -76,15 +76,7 @@ def _dump_piece(piece):
 
 def _vocab_index(piece, vocabulary):
     # TODO: Does it need to take all the pitch vector to be the key?
-    # dumped_piece = piece
-    # copied = set([int(p) for p in piece])
-    # copied = sorted(copied)
-
-    # vector_size = int(len(copied) / 4)
-    # vector_size = len(copied)
     dumped_piece = _dump_piece(piece)
-    # dumped_piece = ''.join(str(int(p)) for p in piece)
-
     if dumped_piece not in vocabulary.keys():
         vocabulary[dumped_piece] = len(vocabulary) + 1
 
@@ -111,7 +103,6 @@ def _original_position_index(dumped_piece, orig_pos_map, original_pos, filename)
 
 
 def tokenize(audios):
-    # TODO: Trocar pela indexação pitch-vizinhos??
     vocabulary = {}
     audio_map = {}
     orig_pos_map = {}
@@ -309,21 +300,6 @@ def get_candidate_neighbourhood(**kwargs):
     candidate_name = kwargs.get('candidate_name')
     original_positions_mapping = kwargs.get('original_positions_mapping')
     neighbours = []
-    # pitch_position_and_vectors = original_positions_mapping.get(candidate_name)
-    # print('get_candidate_neighbourhood NOT IMPLEMENTED YET!!!!')
-
-    # audio_chunks = get_audio_chunks(candidate)
-    # for chunk in audio_chunks:
-    #     dumped_piece = _dump_piece(chunk)
-    #     corresponding = list(
-    #         filter(
-    #             lambda: position_and_vector: (position_and_vector[1] == dumped_piece),
-    #             pitch_position_and_vectors
-    #         )
-    #     )[0]
-    #     position, _vector = corresponding
-    # position = filter( pitch_vectors)
-
     # Apply shift, shorthen, lengthen operations
     # Left moved vector
     left_moved_vector = shift(candidate, BALS_SHIFT_SIZE)
@@ -523,7 +499,7 @@ def calculate_mean_reciprocal_rank(all_queries_distances, show_top_x):
         correct_result = results_mapping[query_name]
         # TODO: É realmente sobre todo o dataset? Se não for, ver o que fazer
         # quando o resultado não estiver no bounded_results
-        # 'results' is a list of tuples (song_name, distance) 
+        # 'results' is a list of tuples (song_name, distance)
         candidates_names = [result[0] for result in results]
         correct_result_index = candidates_names.index(correct_result)
         rank = correct_result_index + 1
