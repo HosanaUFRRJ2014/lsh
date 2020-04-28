@@ -10,6 +10,8 @@ from constants import (
     SEARCH_METHODS,
     METHODS,
     LINEAR_SCALING,
+    RECURSIVE_ALIGNMENT,
+    KTRA,
     MATCHING_ALGORITHMS,
     SHOW_TOP_X
 )
@@ -103,11 +105,21 @@ def process_args():
         ),
         default=LINEAR_SCALING
     )
+    parser.add_argument(
+        "--use_ls",
+        type=bool,
+        help="If {} and {} will include {}. Defaults to False.".format(
+            RECURSIVE_ALIGNMENT, KTRA, LINEAR_SCALING
+        ),
+        default=False
+    )
     args = parser.parse_args()
     num_permutations = args.number_of_permutations
     method_name = args.method
     song_filename = args.song_filename
     matching_algorithm = args.matching_algorithm
+    use_ls = args.use_ls
+    print('use_ls? ', use_ls)
     show_top_x = args.show_top
 
     invalid_method = method_name not in METHODS
@@ -119,11 +131,11 @@ def process_args():
         log_invalid_matching_algorithm_error(matching_algorithm)
         exit(1)
 
-    return method_name, song_filename, num_permutations, matching_algorithm, show_top_x
+    return method_name, song_filename, num_permutations, matching_algorithm, use_ls, show_top_x
 
 
 def main():
-    method_name, song_filename, num_permutations, matching_algorithm, show_top_x = process_args()
+    method_name, song_filename, num_permutations, matching_algorithm, use_ls, show_top_x = process_args()
 
     load_pitch_vectors = {
         SERIALIZE_PITCH_VECTORS: serialize_pitch_vectors,
@@ -173,7 +185,8 @@ def main():
             query=pitch_vectors,
             candidates_indexes=candidates_indexes,
             candidates=candidates,
-            original_positions_mapping=original_positions_mapping
+            original_positions_mapping=original_positions_mapping,
+            use_ls=use_ls
         )
         print_results(matching_algorithm, results, show_top_x)
         mrr = calculate_mean_reciprocal_rank(results, show_top_x)
