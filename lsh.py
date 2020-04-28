@@ -497,14 +497,15 @@ def apply_matching_algorithm(
             # Rescaling here to optmize time consumption
             rescaled_query_audios = rescale_audio(query_audio)
         else:
-            rescaled_query_audios = [query_audio]
+            # not an array for jaccard, ra and ktra
+            rescaled_query_audios = query_audio
         for audio_index, candidate_tuple in zip(candidates_indexes, candidates):
             candidate_filename, candidate = candidate_tuple
             candidate = np.array(candidate)
             candidate = np.trim_zeros(candidate)
             ##
             distance_or_similarity = matching_algorithms[choosed_algorithm](
-                rescaled_query_audios,  # not an array for jaccard
+                rescaled_query_audios,
                 candidate,
                 query_audio_name=query_audio_name,
                 include_zero_distance=True,  # For LS and BALS
