@@ -27,16 +27,27 @@ JSON_PATH = 'json_files'
 # Methods
 SERIALIZE_PITCH_VECTORS = 'serialize_pitches'
 CREATE_INDEX = 'create_index'
+NLSH_INDEX = 'nlsh_index'
+PLSH_INDEX = 'plsh_index'
+INDEX_TYPES = [
+    NLSH_INDEX,
+    PLSH_INDEX
+]
+
 SEARCH_ALL = 'search_all'
 SEARCH = 'search'
 SEARCH_METHODS = [
     SEARCH,
     SEARCH_ALL
 ]
+
 METHODS = [
     SERIALIZE_PITCH_VECTORS,
-    CREATE_INDEX,
+    CREATE_INDEX
 ] + SEARCH_METHODS
+
+
+REQUIRE_INDEX_TYPE = [CREATE_INDEX] + SEARCH_METHODS
 
 ##
 # Matching Algorithms

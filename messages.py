@@ -34,7 +34,7 @@ def log_no_dumped_files_error(original_error):
     logging.error(message)
 
 
-def log_no_serialized_pitch_vectors_error(structure_name):
+def log_no_serialized_pitch_contour_segmentations_error(structure_name):
     message = ''.join([
         "ERROR: Couldn't load {}. ".format(structure_name),
         "Use method '{}', to serialize pitch vectors first.".format(

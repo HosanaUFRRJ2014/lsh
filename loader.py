@@ -1,6 +1,7 @@
 from essentia.standard import (
-    MusicExtractor,
     EqloudLoader,
+    MusicExtractor,
+    PitchContourSegmentation,
     PredominantPitchMelodia
 )
 import numpy as np
@@ -15,7 +16,7 @@ from constants import (
 
 Extractor = MusicExtractor()
 
-__all__ = ["load_all_songs_pitch_vectors", "load_all_queries_pitch_vectors"]
+__all__ = ["load_all_songs_pitch_contour_segmentations", "load_all_queries_pitch_contour_segmentations"]
 
 
 def _format_path(name, audio_path=None):
@@ -66,41 +67,50 @@ def _load_audio(filepath):
     return audio
 
 
-def _extract_pitch_vector(audio):
+def _extract_pitch_values(audio):
     pitch_extractor = PredominantPitchMelodia(frameSize=2048, hopSize=128)
     pitch_values, _pitch_confidence = pitch_extractor(audio)
     return pitch_values
 
 
-def _load_audio_pitch_vector(audio_path):
+def _load_audio_pitch_contour_segmentation(audio_path):
+    '''
+    Returns the audio path, the pitch vector, the onsets and durations of
+    each pitch.
+    '''
     audio = _load_audio(audio_path)
-    pitch_vector = _extract_pitch_vector(audio)
-    return audio_path, pitch_vector
+    pitch_values = _extract_pitch_values(audio)
+    # Removes zeros from the beginning and the end of the audio
+    pitch_values = np.trim_zeros(pitch_values)
+
+    contour_segmentator = PitchContourSegmentation()
+    onsets, durations, _midipitches = contour_segmentator(pitch_values, audio)
+    return audio_path, pitch_values, onsets, durations
 
 
-def _load_all_audio_pitch_vectors(filenames_file, path):
-    pitch_vectors = []
+def _load_all_audio_pitch_contour_segmentations(filenames_file, path):
+    pitch_contour_segmentations = []
     audios_paths = _read_dataset_names(filenames_file, path)
     for audio_path in audios_paths[:100]:
         print('path: ', audio_path)
-        pitch_vectors.append(
-            _load_audio_pitch_vector(audio_path)
+        pitch_contour_segmentations.append(
+            _load_audio_pitch_contour_segmentation(audio_path)
         )
 
-    return pitch_vectors
+    return pitch_contour_segmentations
 
 
-def load_song_pitch_vector(audio_path):
-    returned_tuple = _load_audio_pitch_vector(audio_path)
+def load_song_pitch_contour_segmentation(audio_path):
+    returned_tuple = _load_audio_pitch_contour_segmentation(audio_path)
     return np.array([returned_tuple])
 
 
-def load_all_songs_pitch_vectors():
-    return _load_all_audio_pitch_vectors(FILENAMES_OF_SONGS, WAV_SONGS_PATH)
+def load_all_songs_pitch_contour_segmentations():
+    return _load_all_audio_pitch_contour_segmentations(FILENAMES_OF_SONGS, WAV_SONGS_PATH)
 
 
-def load_all_queries_pitch_vectors():
-    return _load_all_audio_pitch_vectors(FILENAMES_OF_QUERIES, QUERIES_PATH)
+def load_all_queries_pitch_contour_segmentations():
+    return _load_all_audio_pitch_contour_segmentations(FILENAMES_OF_QUERIES, QUERIES_PATH)
 
 
 def load_expected_results():

@@ -18,7 +18,7 @@ from constants import (
 
 from json_manipulator import (
     load_structure,
-    serialize_pitch_vectors,
+    serialize_pitch_contour_segmentations,
     deserialize_songs_pitch_vectors,
     deserialize_queries_pitch_vectors
 )
@@ -29,7 +29,7 @@ from lsh import (
     calculate_mean_reciprocal_rank
 )
 from loader import (
-    load_song_pitch_vector,
+    load_song_pitch_contour_segmentation,
     load_expected_results
 )
 
@@ -37,6 +37,9 @@ from messages import (
     log_invalid_matching_algorithm_error,
     log_invalid_method_error,
     log_no_dumped_files_error
+)
+from utils import (
+    unzip_pitch_contours
 )
 
 
@@ -119,7 +122,6 @@ def process_args():
     song_filename = args.song_filename
     matching_algorithm = args.matching_algorithm
     use_ls = args.use_ls
-    print('use_ls? ', use_ls)
     show_top_x = args.show_top
 
     invalid_method = method_name not in METHODS
@@ -137,11 +139,11 @@ def process_args():
 def main():
     method_name, song_filename, num_permutations, matching_algorithm, use_ls, show_top_x = process_args()
 
-    load_pitch_vectors = {
-        SERIALIZE_PITCH_VECTORS: serialize_pitch_vectors,
+    load_pitch_contour_segmentations = {
+        SERIALIZE_PITCH_VECTORS: serialize_pitch_contour_segmentations,
         CREATE_INDEX: deserialize_songs_pitch_vectors,
         SEARCH_ALL: deserialize_queries_pitch_vectors,
-        SEARCH: load_song_pitch_vector
+        SEARCH: load_song_pitch_contour_segmentation
     }
 
     # Loading pitch vectors from audios
@@ -150,6 +152,8 @@ def main():
         pitch_vectors = load_pitch_vectors[method_name](song_filename)
     else:
         pitch_vectors = load_pitch_vectors[method_name]()
+    if method_name != SERIALIZE_PITCH_VECTORS:
+        pitch_vectors = unzip_pitch_contours(pitch_contour_segmentations)
 
     if method_name == CREATE_INDEX:
         # Creating index

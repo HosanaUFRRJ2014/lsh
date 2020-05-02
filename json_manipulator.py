@@ -3,10 +3,10 @@ from json import JSONEncoder, dump, load
 import numpy as np
 from constants import JSON_PATH
 from loader import (
-    load_all_songs_pitch_vectors,
-    load_all_queries_pitch_vectors
+    load_all_songs_pitch_contour_segmentations,
+    load_all_queries_pitch_contour_segmentations
 )
-from messages import log_no_serialized_pitch_vectors_error
+from messages import log_no_serialized_pitch_contour_segmentations_error
 
 
 class NumpyArrayEncoder(JSONEncoder):
@@ -37,15 +37,21 @@ def load_structure(structure_name):
     return loaded
 
 
-def serialize_pitch_vectors():
+def serialize_pitch_contour_segmentations():
+    '''
+    Serializes onsets, durations and pitch vectors of the songs and queries.
+    '''
     loader_functions_and_names = [
-        (load_all_songs_pitch_vectors, 'songs_pitch_vectors'),
-        (load_all_queries_pitch_vectors, 'queries_pitch_vectors')
+        (load_all_songs_pitch_contour_segmentations, 'songs_pitch_contour_segmentations'),
+        (load_all_queries_pitch_contour_segmentations, 'queries_pitch_contour_segmentations')
     ]
 
     for loader_function, structure_name in loader_functions_and_names:
-        pitch_vectors = loader_function()
-        dump_structure(structure=pitch_vectors, structure_name=structure_name)
+        pitch_contour_segmentations = loader_function()
+        dump_structure(
+            structure=pitch_contour_segmentations,
+            structure_name=structure_name
+        )
 
 
 def _deserialize_pitch_vectors(structure_name):
