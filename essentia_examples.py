@@ -1,11 +1,17 @@
+from essentia.standard import (
+    MusicExtractor,
+    EqloudLoader,
+    PredominantPitchMelodia,
+    PitchContourSegmentation
+)
+from math import floor
+
 # Essentia usage examples
 
 filepath = '/home/hosana/TCC/uniformiza_dataset/songs_wav/000002.wav'
 
 #
 # # Music feature extraction
-from essentia.standard import MusicExtractor, EqloudLoader, PredominantPitchMelodia
-from math import floor
 
 my_extractor = MusicExtractor()
 features, features_frames = my_extractor.compute(filepath)
@@ -31,6 +37,14 @@ pitch_extractor = PredominantPitchMelodia(frameSize=2048, hopSize=128)
 pitch_values, pitch_confidence = pitch_extractor(audio)
 
 print('Pitch values: {}'.format(pitch_values))
+
+
+# Extract onsets, durations and midipitches (quantized to the equal tempered
+# scale, i. e, the common musical scale used at present) of each note
+contour_segmentator = PitchContourSegmentation()
+onsets, durations, midipitches = contour_segmentator(pitch_values, audio)
+
+
 
 # One song in PLSH index
 EXTRACTING_INTERVAL = 2
