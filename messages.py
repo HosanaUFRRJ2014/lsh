@@ -1,10 +1,19 @@
 import logging
 from constants import (
     CREATE_INDEX,
+    INDEX_TYPES,
     SERIALIZE_PITCH_VECTORS,
     MATCHING_ALGORITHMS,
     METHODS
 )
+
+
+def log_invalid_index_type(index_types):
+    message = "'{}' is(are) not (a) valid(s) index(es) type(s). Options are {}".format(
+        index_types,
+        INDEX_TYPES
+    )
+    logging.error(message)
 
 
 def log_invalid_matching_algorithm_error(matching_algorithm):

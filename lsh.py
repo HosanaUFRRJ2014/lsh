@@ -2,14 +2,16 @@
 from sys import float_info
 from copy import copy
 import numpy as np
-from math import floor
+from math import floor, ceil
 from random import sample, randint
-from scipy.sparse import lil_matrix
+from scipy.ndimage import find_objects
 from scipy.ndimage.interpolation import shift
 from argparse import ArgumentParser
 from essentia.standard import Mean
 
 from constants import (
+    PLSH_INDEX,
+    NLSH_INDEX,
     SELECTION_FUNCTIONS,
     SELECTION_FUNCTION_COUNT,
     JACCARD_SIMILARITY,
@@ -33,10 +35,11 @@ MAX_FLOAT = float_info.max
 mean = Mean()
 
 
-def get_audio_chunks(pitch_values, include_original_positions=False):
+def exec_plsh_pitch_extraction(pitch_contour_segmentation, include_original_positions=False):
     '''
-    Split the pitch vector into vectors.
+    Splits the pitch vector into vectors, according to PLSH indexing.
     '''
+    _, pitch_values, _, _ = pitch_contour_segmentation
     original_positions = []
     EXTRACTING_INTERVAL = 2
     WINDOW_SHIFT = 15
@@ -44,15 +47,68 @@ def get_audio_chunks(pitch_values, include_original_positions=False):
     pitch_vectors = []
     window_start = 0
 
-    # Removes zerors from the start and the beginning of the audio
-    pitch_values = np.trim_zeros(pitch_values)
-
     number_of_windows = len(pitch_values) / (WINDOW_SHIFT)
     number_of_windows = floor(number_of_windows)
     # # positions_in_original_song = []
     for window in range(number_of_windows):
         window_end = window_start + WINDOW_LENGTH
         pitch_vector = pitch_values[window_start:window_end:EXTRACTING_INTERVAL]
+        original_positions.append(window_start)
+        pitch_vectors.append(pitch_vector)
+        window_start += WINDOW_SHIFT
+
+    if include_original_positions:
+        return pitch_vectors, original_positions
+    else:
+        return pitch_vectors
+
+
+def exec_nlsh_pitch_extraction(
+    pitch_contour_segmentation, include_original_positions=False
+):
+    '''
+    Split the pitch vector into vectors, according to NLSH indexing.
+    If a note is longer than lenght L, it's splited into one or more notes.
+    '''
+    _, pitch_values, onsets, durations = pitch_contour_segmentation
+    PITCHES_PER_SECOND = 25
+    WINDOW_SHIFT = 1
+    WINDOW_LENGTH = 10
+    MAX_LENGHT_L = 10
+
+    original_positions = []
+    pitch_vectors = []
+    window_start = 0
+    calculate_note_shift = lambda duration: duration * PITCHES_PER_SECOND
+
+    # Splits notes greater than MAX_LENGHT_L
+    processed_pitch_values = []
+    get_pitch_index = lambda onset: int(onset * PITCHES_PER_SECOND)
+    for onset, duration in zip(onsets, durations):
+        processed_onsets = []
+        processed_durations = []
+        processed_onsets.append(onset)
+        if duration > MAX_LENGHT_L:
+            splited_duration = duration / MAX_LENGHT_L
+            number_of_splits = ceil(duration / MAX_LENGHT_L)
+            for i in range(1, number_of_splits + 1):
+                new_onset = onset + splited_duration * i
+                processed_onsets.append(new_onset)
+                processed_durations.append(splited_duration)
+        else:
+            processed_durations.append(duration)
+
+        for p_onset, _p_duration in zip(processed_onsets, processed_durations):
+            index = get_pitch_index(p_onset)
+            processed_pitch_values.append(pitch_values[index])
+
+    # Generate pitch vectors
+    window_start = 0
+    number_of_windows = len(pitch_values) / (WINDOW_SHIFT)
+    number_of_windows = floor(number_of_windows)
+    for pitch in range(number_of_windows):
+        window_end = window_start + WINDOW_LENGTH
+        pitch_vector = pitch_values[window_start:window_end]
         original_positions.append(window_start)
         pitch_vectors.append(pitch_vector)
         window_start += WINDOW_SHIFT
@@ -102,19 +158,25 @@ def _original_position_index(dumped_piece, orig_pos_map, original_pos, filename)
     return orig_pos_map
 
 
-def tokenize(audios):
+def tokenize(pitch_contour_segmentations, index_type):
     vocabulary = {}
     audio_map = {}
     orig_pos_map = {}
     td_matrix_temp = []
-    audios_length = len(audios)
-    for i in range(audios_length):
+    number_of_audios = len(pitch_contour_segmentations)
+    exec_pitch_extraction = {
+        PLSH_INDEX: exec_plsh_pitch_extraction,
+        NLSH_INDEX: exec_nlsh_pitch_extraction
+    }
+    for i in range(number_of_audios):
         di_pieces = []
-        filename, audio = audios[i]
-        audio_chunks, original_positions = get_audio_chunks(
-            audio,
+        filename, _audio, _onsets, _durations = pitch_contour_segmentations[i]
+
+        audio_chunks, original_positions = exec_pitch_extraction[index_type](
+            pitch_contour_segmentations[i],
             include_original_positions=True
         )
+
         for audio_chunk_index, piecej in enumerate(audio_chunks):
             index, dumped_piece = _vocab_index(piecej, vocabulary)
             di_pieces.append(index)
@@ -127,9 +189,9 @@ def tokenize(audios):
             )
         td_matrix_temp.append(di_pieces)
         di_pieces = None
-    td_matrix = np.zeros([len(vocabulary), audios_length])
+    td_matrix = np.zeros([len(vocabulary), number_of_audios])
 
-    for i in range(audios_length):
+    for i in range(number_of_audios):
         # TODO: Verify if I can really ignore empty ones. Why there are empties?
         if td_matrix_temp[i]:
             td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
@@ -246,8 +308,8 @@ def calculate_jaccard_similarity(query_audio, candidate, **kwargs):
        members found in (2).
     4. Multiply the found number in (3) by 100.
     '''
-    query_chunks = get_audio_chunks(query_audio.tolist())
-    candidate_chunks = get_audio_chunks(candidate.tolist())
+    query_chunks = exec_plsh_pitch_extraction(query_audio.tolist())
+    candidate_chunks = exec_plsh_pitch_extraction(candidate.tolist())
 
     intersection = np.intersect1d(candidate_chunks, query_chunks)
     union = np.union1d(candidate_chunks, query_chunks)
@@ -565,16 +627,19 @@ def calculate_mean_reciprocal_rank(all_queries_distances, show_top_x):
     return mean_reciprocal_rank
 
 
-def create_index(audios_list, num_permutations):
+def create_index(pitch_contour_segmentations, index_type, num_permutations):
     # Indexing
-    td_matrix, audio_mapping, original_positions_mapping = tokenize(audios_list)
+    td_matrix, audio_mapping, original_positions_mapping = tokenize(
+        pitch_contour_segmentations, index_type
+    )
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
     # Serializing indexes
+    index_type_name = 'inverted_{}'.format(index_type)
     indexes_and_indexes_names = [
-        (inverted_index, 'inverted_index'),
-        (audio_mapping, 'audio_mapping'),
-        (original_positions_mapping, 'original_positions_mapping')
+        (inverted_index, index_type_name),
+        # (audio_mapping, 'audio_mapping'),
+        # (original_positions_mapping, 'original_positions_mapping')
     ]
     for index, index_name in indexes_and_indexes_names:
         dump_structure(

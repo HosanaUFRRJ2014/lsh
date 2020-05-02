@@ -54,23 +54,29 @@ def serialize_pitch_contour_segmentations():
         )
 
 
-def _deserialize_pitch_vectors(structure_name):
-    pitch_vectors = []
+def _deserialize_pitch_contour_segmentations(structure_name):
+    pitch_contour_segmentations = []
     try:
-        pitch_vectors = load_structure(structure_name=structure_name)
+        pitch_contour_segmentations = load_structure(
+            structure_name=structure_name
+        )
     except FileNotFoundError:
-        log_no_serialized_pitch_vectors_error(structure_name)
+        log_no_serialized_pitch_contour_segmentations_error(structure_name)
         exit(1)
-    return pitch_vectors
+    return pitch_contour_segmentations
 
 
-def deserialize_songs_pitch_vectors():
-    structure_name = 'songs_pitch_vectors'
-    pitch_vectors = _deserialize_pitch_vectors(structure_name=structure_name)
-    return pitch_vectors
+def deserialize_songs_pitch_contour_segmentations():
+    structure_name = 'songs_pitch_contour_segmentations'
+    pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
+        structure_name=structure_name
+    )
+    return pitch_contour_segmentations
 
 
-def deserialize_queries_pitch_vectors():
-    structure_name = 'queries_pitch_vectors'
-    pitch_vectors = _deserialize_pitch_vectors(structure_name=structure_name)
-    return pitch_vectors
+def deserialize_queries_pitch_contour_segmentations():
+    structure_name = 'queries_pitch_contour_segmentations'
+    pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
+        structure_name=structure_name
+    )
+    return pitch_contour_segmentations

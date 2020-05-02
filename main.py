@@ -1,13 +1,18 @@
 # -*-coding:utf8;-*-
+import sys
 import numpy as np
 from argparse import ArgumentParser
 from constants import (
     DEFAULT_NUMBER_OF_PERMUTATIONS,
     SERIALIZE_PITCH_VECTORS,
     CREATE_INDEX,
+    PLSH_INDEX,
+    NLSH_INDEX,
+    INDEX_TYPES,
     SEARCH,
     SEARCH_ALL,
     SEARCH_METHODS,
+    REQUIRE_INDEX_TYPE,
     METHODS,
     LINEAR_SCALING,
     RECURSIVE_ALIGNMENT,
@@ -19,8 +24,8 @@ from constants import (
 from json_manipulator import (
     load_structure,
     serialize_pitch_contour_segmentations,
-    deserialize_songs_pitch_vectors,
-    deserialize_queries_pitch_vectors
+    deserialize_songs_pitch_contour_segmentations,
+    deserialize_queries_pitch_contour_segmentations
 )
 from lsh import (
     apply_matching_algorithm,
@@ -34,11 +39,13 @@ from loader import (
 )
 
 from messages import (
+    log_invalid_index_type,
     log_invalid_matching_algorithm_error,
     log_invalid_method_error,
     log_no_dumped_files_error
 )
 from utils import (
+    is_create_index_or_search_method,
     unzip_pitch_contours
 )
 
@@ -56,7 +63,7 @@ def print_results(matching_algorithm, results, show_top_x):
 def process_args():
     '''
     Processes program args.
-    Returns a tuple containing the program args.
+    Returns a tuple containing the processed program args.
     '''
     parser = ArgumentParser()
     help_msg = "".join([
@@ -73,10 +80,21 @@ def process_args():
         )
     )
     parser.add_argument(
+        "--index_types",
+        "-i",
+        nargs='+',
+        type=str,
+        help="Options: {}. Required if \"method\" is any of \"{}\". Inform one or more.".format(
+            ', '.join(INDEX_TYPES),
+            ', '.join(REQUIRE_INDEX_TYPE)
+        ),
+        required=is_create_index_or_search_method(sys.argv)
+    )
+    parser.add_argument(
         "--song_filename",
         "-f",
         type=str,
-        help="Filename for a song to search. NOTE: Loads song pitches",
+        help="Filename for a song to search. NOTE: Loads song pitches.",
         default=''
     )
     parser.add_argument(
@@ -119,11 +137,13 @@ def process_args():
     args = parser.parse_args()
     num_permutations = args.number_of_permutations
     method_name = args.method
+    index_types = args.index_types if args.index_types else []
     song_filename = args.song_filename
     matching_algorithm = args.matching_algorithm
     use_ls = args.use_ls
     show_top_x = args.show_top
 
+    # Validate args
     invalid_method = method_name not in METHODS
     if invalid_method:
         log_invalid_method_error(method_name)
@@ -133,34 +153,62 @@ def process_args():
         log_invalid_matching_algorithm_error(matching_algorithm)
         exit(1)
 
-    return method_name, song_filename, num_permutations, matching_algorithm, use_ls, show_top_x
+    invalid_index_type = len(
+        set(INDEX_TYPES).union(set(index_types))
+    ) != len(INDEX_TYPES)
+    if invalid_index_type:
+        log_invalid_index_type(index_types)
+        exit(1)
+
+    return method_name, \
+        index_types, \
+        song_filename, \
+        num_permutations, \
+        matching_algorithm, \
+        use_ls, \
+        show_top_x
 
 
 def main():
-    method_name, song_filename, num_permutations, matching_algorithm, use_ls, show_top_x = process_args()
+    method_name,  \
+        index_types,  \
+        song_filename,  \
+        num_permutations,  \
+        matching_algorithm,  \
+        use_ls,  \
+        show_top_x = process_args()
 
     load_pitch_contour_segmentations = {
         SERIALIZE_PITCH_VECTORS: serialize_pitch_contour_segmentations,
-        CREATE_INDEX: deserialize_songs_pitch_vectors,
-        SEARCH_ALL: deserialize_queries_pitch_vectors,
+        CREATE_INDEX: deserialize_songs_pitch_contour_segmentations,
+        SEARCH_ALL: deserialize_queries_pitch_contour_segmentations,
         SEARCH: load_song_pitch_contour_segmentation
     }
 
     # Loading pitch vectors from audios
     # FIXME: Poor code
     if method_name == SEARCH:
-        pitch_vectors = load_pitch_vectors[method_name](song_filename)
+        pitch_contour_segmentations = load_pitch_contour_segmentations[method_name](song_filename)
     else:
-        pitch_vectors = load_pitch_vectors[method_name]()
+        pitch_contour_segmentations = load_pitch_contour_segmentations[method_name]()
+
     if method_name != SERIALIZE_PITCH_VECTORS:
         pitch_vectors = unzip_pitch_contours(pitch_contour_segmentations)
 
     if method_name == CREATE_INDEX:
-        # Creating index
-        create_index(pitch_vectors, num_permutations)
+        # Creating index(es)
+        for index_type in index_types:
+            create_index(
+                pitch_contour_segmentations, index_type, num_permutations
+            )
     elif method_name in SEARCH_METHODS:
         # Loading pitch vectors from json files
-        song_pitch_vectors = load_pitch_vectors[CREATE_INDEX]()
+        # TODO: ADD NLSH INDEX here
+        song_pitch_contour_segmentations = load_pitch_contour_segmentations[PLSH_INDEX]()
+        song_pitch_vectors = unzip_pitch_contours(
+            song_pitch_contour_segmentations
+        )
+
         # Searching songs
         inverted_index = None
         audio_mapping = None
@@ -178,7 +226,7 @@ def main():
             exit(1)
 
         candidates_indexes, candidates = search(
-            query=pitch_vectors,
+            pitch_contour_segmentations,
             inverted_index=inverted_index,
             songs_list=song_pitch_vectors,
             num_permutations=num_permutations
