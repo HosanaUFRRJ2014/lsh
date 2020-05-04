@@ -29,7 +29,7 @@ from json_manipulator import (
 )
 from lsh import (
     apply_matching_algorithm,
-    create_index,
+    create_indexes,
     search,
     calculate_mean_reciprocal_rank
 )
@@ -41,17 +41,15 @@ from loader import (
 from messages import (
     log_invalid_index_type,
     log_invalid_matching_algorithm_error,
-    log_invalid_method_error,
-    log_no_dumped_files_error
+    log_invalid_method_error
 )
 from utils import (
-    is_create_index_or_search_method,
-    unzip_pitch_contours
+    is_create_index_or_search_method
 )
 
 
-def print_results(matching_algorithm, results, show_top_x):
-    print('Results found by ', matching_algorithm)
+def print_results(matching_algorithm, index_type, results, show_top_x):
+    print('Results found by {} in {}'.format(matching_algorithm, index_type))
     for query_name, result in results.items():
         print('Query: ', query_name)
         print('Results:')
@@ -185,62 +183,33 @@ def main():
         SEARCH: load_song_pitch_contour_segmentation
     }
 
-    # Loading pitch vectors from audios
-    # FIXME: Poor code
-    if method_name == SEARCH:
-        pitch_contour_segmentations = load_pitch_contour_segmentations[method_name](song_filename)
-    else:
-        pitch_contour_segmentations = load_pitch_contour_segmentations[method_name]()
-
-    if method_name != SERIALIZE_PITCH_VECTORS:
-        pitch_vectors = unzip_pitch_contours(pitch_contour_segmentations)
-
     if method_name == CREATE_INDEX:
         # Creating index(es)
-        for index_type in index_types:
-            create_index(
-                pitch_contour_segmentations, index_type, num_permutations
-            )
-    elif method_name in SEARCH_METHODS:
-        # Loading pitch vectors from json files
-        # TODO: ADD NLSH INDEX here
-        song_pitch_contour_segmentations = load_pitch_contour_segmentations[PLSH_INDEX]()
-        song_pitch_vectors = unzip_pitch_contours(
-            song_pitch_contour_segmentations
+        pitch_contour_segmentations = load_pitch_contour_segmentations[method_name]()
+        create_indexes(
+            pitch_contour_segmentations, index_types, num_permutations
         )
+    elif method_name in SEARCH_METHODS:
+        # Loading query and song pitch vectors
+        if method_name == SEARCH:
+            query_pitch_contour_segmentations = load_pitch_contour_segmentations[method_name](song_filename)
+        elif method_name == SEARCH_ALL:
+            query_pitch_contour_segmentations = load_pitch_contour_segmentations[method_name]()
 
-        # Searching songs
-        inverted_index = None
-        audio_mapping = None
-        try:
-            inverted_index, audio_mapping, original_positions_mapping = (
-                load_structure(structure_name=index_name)
-                for index_name in [
-                    'inverted_index',
-                    'audio_mapping',
-                    'original_positions_mapping'
-                ]
-            )
-        except Exception as e:
-            log_no_dumped_files_error(e)
-            exit(1)
+        song_pitch_contour_segmentations = load_pitch_contour_segmentations[CREATE_INDEX]()
 
-        candidates_indexes, candidates = search(
-            pitch_contour_segmentations,
-            inverted_index=inverted_index,
-            songs_list=song_pitch_vectors,
+        # Searching and applying matching algorithms
+        results = search(
+            query_pitch_contour_segmentations=query_pitch_contour_segmentations,
+            song_pitch_contour_segmentations=song_pitch_contour_segmentations,
+            index_types=index_types,
+            matching_algorithm=matching_algorithm,
+            use_ls=use_ls,
             num_permutations=num_permutations
         )
 
-        results = apply_matching_algorithm(
-            choosed_algorithm=matching_algorithm,
-            query=pitch_vectors,
-            candidates_indexes=candidates_indexes,
-            candidates=candidates,
-            original_positions_mapping=original_positions_mapping,
-            use_ls=use_ls
-        )
-        print_results(matching_algorithm, results, show_top_x)
+        # Results and MRR
+        print_results(matching_algorithm, index_types, results, show_top_x)
         mrr = calculate_mean_reciprocal_rank(results, show_top_x)
 
         print('Mean Reciprocal Ranking (MRR): ', mrr)
@@ -248,3 +217,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# TODO: Renomear pitch_vectors, posto que estes contém o audio path e
+# o vetor de pitches
+ 

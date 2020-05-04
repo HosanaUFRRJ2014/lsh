@@ -25,10 +25,22 @@ from constants import (
     INITIAL_KTRA_K_VALUE
 )
 
-from json_manipulator import dump_structure, NumpyArrayEncoder
+from json_manipulator import (
+    dump_structure,
+    load_structure,
+    NumpyArrayEncoder
+)
 from loader import load_expected_results
 
-__all__ = ["create_index", "search"]
+from messages import (
+    log_no_dumped_files_error
+)
+
+from utils import (
+    unzip_pitch_contours
+)
+
+__all__ = ["create_indexes", "search"]
 
 
 MAX_FLOAT = float_info.max
@@ -68,11 +80,11 @@ def exec_nlsh_pitch_extraction(
 ):
     '''
     Split the pitch vector into vectors, according to NLSH indexing.
-    If a note is longer than lenght L, it's splited into one or more notes.
+    If a note is longer than MAX_LENGHT_L, it's splited into one or more notes.
     '''
     _, pitch_values, onsets, durations = pitch_contour_segmentation
     PITCHES_PER_SECOND = 25
-    WINDOW_SHIFT = 1
+    WINDOW_SHIFT = 3   # in article: 1
     WINDOW_LENGTH = 10
     MAX_LENGHT_L = 10
 
@@ -523,7 +535,7 @@ def calculate_ktra(query_audio, candidate, **kwargs):
 
     min_distance = min([d_minus, d_zero, d_plus])
     if depth < MAX_KTRA_DEPTH:
-        # FIXME: Needs to treat iqual distances?
+        # FIXME: Needs to treat equal distances?
         if d_minus == min_distance:
             query_audio = query_audio - k
         elif d_plus == min_distance:
@@ -583,7 +595,10 @@ def apply_matching_algorithm(
                 k=INITIAL_KTRA_K_VALUE  # For ktra
             )
             ##
-            query_distance[candidate_filename] = distance_or_similarity
+            if choosed_algorithm == LINEAR_SCALING:
+                query_distance[candidate_filename] = distance_or_similarity[0]
+            else:
+                query_distance[candidate_filename] = distance_or_similarity
 
         reverse_order = False
         if choosed_algorithm == JACCARD_SIMILARITY:
@@ -627,7 +642,7 @@ def calculate_mean_reciprocal_rank(all_queries_distances, show_top_x):
     return mean_reciprocal_rank
 
 
-def create_index(pitch_contour_segmentations, index_type, num_permutations):
+def _create_index(pitch_contour_segmentations, index_type, num_permutations):
     # Indexing
     td_matrix, audio_mapping, original_positions_mapping = tokenize(
         pitch_contour_segmentations, index_type
@@ -648,14 +663,88 @@ def create_index(pitch_contour_segmentations, index_type, num_permutations):
         )
 
 
-def search(query, inverted_index, songs_list, num_permutations):
+def create_indexes(pitch_contour_segmentations, index_types, num_permutations):
+    for index_type in index_types:
+        _create_index(pitch_contour_segmentations, index_type, num_permutations)
+
+
+def _search_in_index(
+    query_pitch_contour_segmentations,
+    inverted_index,
+    songs_list,
+    index_type,
+    num_permutations
+):
     query_td_matrix, _query_audio_mapping, _query_positions_mapping = tokenize(
-        query
+        query_pitch_contour_segmentations, index_type
     )
     candidates_count = search_inverted_index(
         query_td_matrix, inverted_index, num_permutations
     )
     candidates_indexes = (np.nonzero(candidates_count)[0] - 1)
+    # try:
+    # songs_list = np.array([pitches for song_name, pitches in songs_list])
     candidates = songs_list[candidates_indexes]
-
+    # except Exception as e:
+    #     import ipdb; ipdb.set_trace()
     return candidates_indexes, candidates
+
+
+def search(
+    query_pitch_contour_segmentations,
+    song_pitch_contour_segmentations,
+    index_types,
+    matching_algorithm,
+    use_ls,
+    num_permutations
+):
+    # Recovering songs pitch vectors
+    song_pitch_vectors = unzip_pitch_contours(
+        song_pitch_contour_segmentations
+    )
+
+    # recovering query pitch vectors
+    query_pitch_vectors = unzip_pitch_contours(
+        query_pitch_contour_segmentations
+    )
+
+    for index_type in index_types:
+        # Recovering dumped index
+        try:
+            original_positions_mapping = None
+            # inverted_index, audio_mapping, original_positions_mapping = (
+            #     load_structure(structure_name=index_name)
+            #     for index_name in [
+            #         'inverted_{}'.format(index_type),
+            #         # 'audio_mapping',
+            #         # 'original_positions_mapping'
+            #     ]
+            # )
+            inverted_index_name = 'inverted_{}'.format(index_type)
+            inverted_index = load_structure(inverted_index_name)
+        except Exception as e:
+            log_no_dumped_files_error(e)
+            exit(1)
+
+        # Searching songs
+        candidates_indexes, candidates = _search_in_index(
+            query_pitch_contour_segmentations,
+            inverted_index=inverted_index,
+            songs_list=song_pitch_vectors,
+            index_type=index_type,
+            num_permutations=num_permutations
+        )
+
+        results = apply_matching_algorithm(
+            choosed_algorithm=matching_algorithm,
+            query=query_pitch_vectors,
+            candidates_indexes=candidates_indexes,
+            candidates=candidates,
+            original_positions_mapping=original_positions_mapping,
+            use_ls=use_ls
+        )
+
+        # TODO: Stop if confidence mesurement is higher than the threshold
+        # TODO: Implement a metric to mix results from first and second filter?
+
+    return results
