@@ -2,7 +2,8 @@ from essentia.standard import (
     MusicExtractor,
     EqloudLoader,
     PredominantPitchMelodia,
-    PitchContourSegmentation
+    PitchContourSegmentation,
+    Chromaprinter
 )
 from math import floor
 
@@ -44,7 +45,11 @@ print('Pitch values: {}'.format(pitch_values))
 contour_segmentator = PitchContourSegmentation()
 onsets, durations, midipitches = contour_segmentator(pitch_values, audio)
 
-
+# Gets pitch_values fingerprint
+Fingerprinter = Chromaprinter()
+fingerprint = Fingerprinter(pitch_values)
+print('fingerprint')
+print(fingerprint)
 
 # One song in PLSH index
 EXTRACTING_INTERVAL = 2
