@@ -26,3 +26,23 @@ def is_create_index_or_search_method(args):
     ])
 
     return is_index_method
+
+
+def percent(part, whole):
+    '''
+    Given a percent and a whole part, calculates its real value.
+    Ex:
+    percent(10, 1000) # Ten percent of a thousand
+    > 100
+    '''
+    return float(whole) / 100 * float(part)
+
+
+def print_results(matching_algorithm, index_type, results, show_top_x):
+    print('Results found by {} in {}'.format(matching_algorithm, index_type))
+    for query_name, result in results.items():
+        print('Query: ', query_name)
+        print('Results:')
+        bounded_result = result[:show_top_x]
+        for position, r in enumerate(bounded_result, start=1):
+            print('\t{:03}. {}'.format(position, r))

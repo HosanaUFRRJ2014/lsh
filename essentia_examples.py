@@ -18,8 +18,8 @@ features, features_frames = my_extractor.compute(filepath)
 
 features_keys = features.descriptorNames()
 # for key in features_keys:
-    # print('{}: {}'.format(key, features[key]))
-    # print('{}'.format(key))
+#    print('{}: {}'.format(key, features[key]))
+#    print('{}'.format(key))
 
 #
 # # Pitch Extraction
@@ -28,7 +28,7 @@ features_keys = features.descriptorNames()
 loader = EqloudLoader(filename=filepath, sampleRate=44100)
 audio = loader()
 print("Duration of the audio sample [sec]:")
-print(len(audio)/44100.0)
+print(len(audio) / 44100.0)
 
 # Extract the pitch curve
 # PitchMelodia takes the entire audio signal as input (no frame-wise processing is required)

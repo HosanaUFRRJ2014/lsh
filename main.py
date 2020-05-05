@@ -44,18 +44,9 @@ from messages import (
     log_invalid_method_error
 )
 from utils import (
-    is_create_index_or_search_method
+    is_create_index_or_search_method,
+    print_results
 )
-
-
-def print_results(matching_algorithm, index_type, results, show_top_x):
-    print('Results found by {} in {}'.format(matching_algorithm, index_type))
-    for query_name, result in results.items():
-        print('Query: ', query_name)
-        print('Results:')
-        bounded_result = result[:show_top_x]
-        for position, r in enumerate(bounded_result, start=1):
-            print('\t{:03}. {}'.format(position, r))
 
 
 def process_args():
@@ -221,4 +212,3 @@ if __name__ == '__main__':
 
 # TODO: Renomear pitch_vectors, posto que estes contém o audio path e
 # o vetor de pitches
- 

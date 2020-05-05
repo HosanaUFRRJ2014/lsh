@@ -37,6 +37,7 @@ from messages import (
 )
 
 from utils import (
+    percent,
     unzip_pitch_contours
 )
 
@@ -460,16 +461,6 @@ def calculate_bals(rescaled_query_audios, candidate, **kwargs):
     return nearest_neighbour_distance
 
 
-def percent(part, whole):
-    '''
-    Given a percent and a whole part, calculates its real value.
-    Ex:
-    percent(10, 1000) # Ten percent of a thousand
-    > 100
-    '''
-    return float(whole) / 100 * float(part)
-
-
 def recursive_align(query_audio, candidate, **kwargs):
     # Compute the linear distance of the corresponding part
     min_distance, rescaled_query_audio = calculate_linear_scaling(
@@ -611,9 +602,6 @@ def apply_matching_algorithm(
         )
         all_queries_distances[query_audio_name] = query_distance
 
-        # print('Stopping earlier for debugging purposes')
-        # break
-
     return all_queries_distances
 
 
@@ -745,6 +733,10 @@ def search(
         )
 
         # TODO: Stop if confidence mesurement is higher than the threshold
-        # TODO: Implement a metric to mix results from first and second filter?
+        # TODO: The threshold should be automatically optimized so
+        # that the true candidates are returned directly and the clip
+        # with the false first ranked candidate is put into the next
+        # filter. In the QBH system, we randomly select part of
+        # query clips as the training set to obtain the threshold
 
     return results
