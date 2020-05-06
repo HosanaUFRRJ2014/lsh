@@ -45,7 +45,6 @@ def serialize_pitch_contour_segmentations():
         (load_all_songs_pitch_contour_segmentations, 'songs_pitch_contour_segmentations'),
         (load_all_queries_pitch_contour_segmentations, 'queries_pitch_contour_segmentations')
     ]
-
     for loader_function, structure_name in loader_functions_and_names:
         pitch_contour_segmentations = loader_function()
         dump_structure(
