@@ -85,10 +85,11 @@ def _load_audio_pitch_contour_segmentation(audio_path):
     return audio_path, pitch_values, onsets, durations
 
 
-def _load_all_audio_pitch_contour_segmentations(filenames_file, path):
+def _load_all_audio_pitch_contour_segmentations(filenames_file, path, start, end):
     pitch_contour_segmentations = []
     audios_paths = _read_dataset_names(filenames_file, path)
-    for audio_path in audios_paths[:100]:
+    end = end if end else len(audios_paths)
+    for audio_path in audios_paths[start:end]:
         print('path: ', audio_path)
         pitch_contour_segmentations.append(
             _load_audio_pitch_contour_segmentation(audio_path)
@@ -97,17 +98,47 @@ def _load_all_audio_pitch_contour_segmentations(filenames_file, path):
     return pitch_contour_segmentations
 
 
+def _get_audios_count(filenames_file, path):
+    audios_paths = _read_dataset_names(filenames_file, path)
+
+    return len(audios_paths)
+
+
+def get_songs_count():
+    return _get_audios_count(
+        filenames_file=FILENAMES_OF_SONGS,
+        path=WAV_SONGS_PATH
+    )
+
+
+def get_queries_count():
+    return _get_audios_count(
+        filenames_file=FILENAMES_OF_QUERIES,
+        path=QUERIES_PATH,
+    )
+
+
 def load_song_pitch_contour_segmentation(audio_path):
     returned_tuple = _load_audio_pitch_contour_segmentation(audio_path)
     return np.array([returned_tuple])
 
 
-def load_all_songs_pitch_contour_segmentations():
-    return _load_all_audio_pitch_contour_segmentations(FILENAMES_OF_SONGS, WAV_SONGS_PATH)
+def load_all_songs_pitch_contour_segmentations(start=0, end=None):
+    return _load_all_audio_pitch_contour_segmentations(
+        filenames_file=FILENAMES_OF_SONGS,
+        path=WAV_SONGS_PATH,
+        start=start,
+        end=end
+    )
 
 
-def load_all_queries_pitch_contour_segmentations():
-    return _load_all_audio_pitch_contour_segmentations(FILENAMES_OF_QUERIES, QUERIES_PATH)
+def load_all_queries_pitch_contour_segmentations(start=0, end=None):
+    return _load_all_audio_pitch_contour_segmentations(
+        filenames_file=FILENAMES_OF_QUERIES,
+        path=QUERIES_PATH,
+        start=start,
+        end=end
+    )
 
 
 def load_expected_results():
