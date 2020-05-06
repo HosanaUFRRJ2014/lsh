@@ -38,7 +38,7 @@ def percent(part, whole):
 
 def print_results(matching_algorithm, index_type, results, show_top_x):
     print('*' * 80)
-    print('Results found by {} in {}'.format(matching_algorithm, index_type))
+    print(f'Results found by {matching_algorithm} in {index_type}')
     for query_name, result in results.items():
         print('Query: ', query_name)
         print('Results:')

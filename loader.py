@@ -20,14 +20,11 @@ __all__ = ["load_all_songs_pitch_contour_segmentations", "load_all_queries_pitch
 
 
 def _format_path(name, audio_path=None):
+    stripped_name = name.rstrip('\n')
     if audio_path:
-        formatted = '{}/{}/{}'.format(
-            PATH_TO_DATASET, audio_path, name.rstrip('\n')
-        )
+        formatted = f'{PATH_TO_DATASET}/{audio_path}/{stripped_name}'
     else:
-        formatted = '{}/{}'.format(
-            PATH_TO_DATASET, name.rstrip('\n')
-        )
+        formatted = f'{PATH_TO_DATASET}/{stripped_name}'
     return formatted
 
 

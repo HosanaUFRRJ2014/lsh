@@ -20,7 +20,7 @@ def dump_structure(structure, structure_name, cls=NumpyArrayEncoder):
     '''
     Dumps Numpy ndarray or Python objects. Defaults to numpy objects.
     '''
-    filename = '{}/{}.json'.format(JSON_PATH, structure_name)
+    filename = f'{JSON_PATH}/{structure_name}.json'
     with open(filename, 'w') as json_file:
         dump(structure, json_file, cls=cls)
 
@@ -29,7 +29,7 @@ def load_structure(structure_name):
     '''
     Loads Numpy ndarray objects.
     '''
-    filename = '{}/{}.json'.format(JSON_PATH, structure_name)
+    filename = f'{JSON_PATH}/{structure_name}.json'
     with open(filename, 'r') as json_file:
         loaded = load(json_file)
         loaded = np.asarray(loaded)

@@ -37,7 +37,7 @@ print(len(audio) / 44100.0)
 pitch_extractor = PredominantPitchMelodia(frameSize=2048, hopSize=128)
 pitch_values, pitch_confidence = pitch_extractor(audio)
 
-print('Pitch values: {}'.format(pitch_values))
+print(f'Pitch values: {pitch_values}')
 
 
 # Extract onsets, durations and midipitches (quantized to the equal tempered

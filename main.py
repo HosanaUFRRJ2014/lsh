@@ -51,9 +51,7 @@ def process_args():
     parser = ArgumentParser()
     help_msg = "".join([
         "Number of permutations LSH will perform.",
-        " Defaults to {}.".format(
-            DEFAULT_NUMBER_OF_PERMUTATIONS
-        )
+        f" Defaults to {DEFAULT_NUMBER_OF_PERMUTATIONS}."
     ])
     parser.add_argument(
         "method",
@@ -91,19 +89,15 @@ def process_args():
         "--show_top",
         "-top",
         type=int,
-        help="Shows top X results. Defaults to {}.".format(
-            SHOW_TOP_X
-        ),
+        help=f"Shows top X results. Defaults to {SHOW_TOP_X}.",
         default=SHOW_TOP_X
     )
     parser.add_argument(
         "--matching_algorithm",
         "-ma",
         type=str,
-        help="It's expected to be informed alongside {} methods. ".format(
-            SEARCH_METHODS
-        ) +
-        "Options: {}. Defaults to {}".format(
+        help=f"It's expected to be informed alongside {SEARCH_METHODS} methods. "
+        + "Options: {}. Defaults to {}".format(
             ', '.join(MATCHING_ALGORITHMS),
             LINEAR_SCALING
         ),
@@ -113,12 +107,10 @@ def process_args():
     parser.add_argument(
         "--use_ls",
         type=bool,
-        help="If {} and {} will include {}. Defaults to False. {}".format(
-            RECURSIVE_ALIGNMENT,
-            KTRA,
-            LINEAR_SCALING,
-            no_need_to_inform_warning
-        ),
+        help=' '.join([
+            f"If {RECURSIVE_ALIGNMENT} and {KTRA} will include {LINEAR_SCALING}.",
+            f"Defaults to False. {no_need_to_inform_warning}"
+        ]),
         default=False
     )
     args = parser.parse_args()
