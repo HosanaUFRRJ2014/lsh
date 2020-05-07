@@ -38,6 +38,8 @@ from messages import (
 
 from utils import (
     percent,
+    print_confidence_measurements,
+    train_confidence,
     unzip_pitch_contours
 )
 
@@ -605,12 +607,11 @@ def apply_matching_algorithm(
     return all_queries_distances
 
 
-def calculate_mean_reciprocal_rank(all_queries_distances, show_top_x):
+def calculate_mean_reciprocal_rank(all_queries_distances, results_mapping, show_top_x):
     '''
     Rank results found by apply_matching_algorithm and applies Mean Reciproval
     Rank (MRR).
     '''
-    results_mapping = load_expected_results()
     reciprocal_ranks = []
     number_of_queries = len(all_queries_distances.keys())
     for query_name, results in all_queries_distances.items():
@@ -630,6 +631,38 @@ def calculate_mean_reciprocal_rank(all_queries_distances, show_top_x):
     return mean_reciprocal_rank
 
 
+def calculate_confidence_measurement(
+    results, show_top_x, is_training_data=False, results_mapping=None
+):
+    all_confidence_measurements = {}
+    for query_name, result in results.items():
+        query_confidence_measurements = []
+        bounded_result = result[:show_top_x]
+        for index, candidate_and_distance in enumerate(bounded_result):
+            candidate, distance = candidate_and_distance
+            denominator = [
+                _distance
+                for candidate_name, _distance in bounded_result
+            ]
+            denominator.pop(index)
+            confidence_measurement = (
+                (show_top_x - 1) * distance
+            ) / sum(denominator)
+            query_confidence_measurements.append(
+                (candidate, confidence_measurement)
+            )
+            # If it's not training data, only calculate confidence for the
+            # first result
+            if not is_training_data:
+                break
+        all_confidence_measurements[query_name] = query_confidence_measurements
+
+    if is_training_data:
+        train_confidence(all_confidence_measurements, results_mapping)
+
+    return all_confidence_measurements
+
+
 def _create_index(pitch_contour_segmentations, index_type, num_permutations):
     # Indexing
     td_matrix, audio_mapping, original_positions_mapping = tokenize(
@@ -638,7 +671,7 @@ def _create_index(pitch_contour_segmentations, index_type, num_permutations):
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
     # Serializing indexes
-    index_type_name = 'inverted_{}'.format(index_type)
+    index_type_name = f'inverted_{index_type}'
     indexes_and_indexes_names = [
         (inverted_index, index_type_name),
         # (audio_mapping, 'audio_mapping'),
@@ -670,11 +703,8 @@ def _search_in_index(
         query_td_matrix, inverted_index, num_permutations
     )
     candidates_indexes = (np.nonzero(candidates_count)[0] - 1)
-    # try:
-    # songs_list = np.array([pitches for song_name, pitches in songs_list])
     candidates = songs_list[candidates_indexes]
-    # except Exception as e:
-    #     import ipdb; ipdb.set_trace()
+
     return candidates_indexes, candidates
 
 
@@ -684,18 +714,21 @@ def search(
     index_types,
     matching_algorithm,
     use_ls,
-    num_permutations
+    show_top_x,
+    is_training_confidence,
+    num_permutations,
+    results_mapping=None
 ):
     # Recovering songs pitch vectors
     song_pitch_vectors = unzip_pitch_contours(
         song_pitch_contour_segmentations
     )
 
-    # recovering query pitch vectors
+    # Recovering query pitch vectors
     query_pitch_vectors = unzip_pitch_contours(
         query_pitch_contour_segmentations
     )
-
+    results = None
     for index_type in index_types:
         # Recovering dumped index
         try:
@@ -703,12 +736,12 @@ def search(
             # inverted_index, audio_mapping, original_positions_mapping = (
             #     load_structure(structure_name=index_name)
             #     for index_name in [
-            #         'inverted_{}'.format(index_type),
+            #         f'inverted_{index_type}',
             #         # 'audio_mapping',
             #         # 'original_positions_mapping'
             #     ]
             # )
-            inverted_index_name = 'inverted_{}'.format(index_type)
+            inverted_index_name = f'inverted_{index_type}'
             inverted_index = load_structure(inverted_index_name)
         except Exception as e:
             log_no_dumped_files_error(e)
@@ -732,11 +765,22 @@ def search(
             use_ls=use_ls
         )
 
-        # TODO: Stop if confidence mesurement is higher than the threshold
-        # TODO: The threshold should be automatically optimized so
-        # that the true candidates are returned directly and the clip
-        # with the false first ranked candidate is put into the next
-        # filter. In the QBH system, we randomly select part of
-        # query clips as the training set to obtain the threshold
+        all_confidence_measurements = calculate_confidence_measurement(
+            results=results,
+            show_top_x=show_top_x,
+            is_training_data=is_training_confidence,
+            results_mapping=results_mapping
+        )
+
+        if not is_training_confidence:
+            print('TO BE IMPLEMENTED YET')
+            # print_confidence_measurements(all_confidence_measurements)
+            # TODO: get confidence from file
+            # TODO: Stop if confidence measurement is higher than the threshold
+            # TODO: The threshold should be automatically optimized so
+            # that the true candidates are returned directly and the clip
+            # with the false first ranked candidate is put into the next
+            # filter. In the QBH system, we randomly select part of
+            # query clips as the training set to obtain the threshold
 
     return results

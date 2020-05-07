@@ -36,6 +36,20 @@ def percent(part, whole):
     return float(whole) / 100 * float(part)
 
 
+def print_confidence_measurements(confidence_measurements):
+    '''
+    Prints confidence measurements of all queries.
+    '''
+    print('*' * 80)
+    for query_name, candidates_and_measures in confidence_measurements.items():
+        print('Query: ', query_name)
+        pluralize = '' if len(candidates_and_measures) == 1 else 's'
+        print('Candidate{0} confidence measurement{0}:'.format(pluralize))
+        for candidate_and_measure in candidates_and_measures:
+            print('\t', candidate_and_measure)
+    print('*' * 80)
+
+
 def print_results(matching_algorithm, index_type, results, show_top_x):
     print('*' * 80)
     print(f'Results found by {matching_algorithm} in {index_type}')
@@ -46,6 +60,27 @@ def print_results(matching_algorithm, index_type, results, show_top_x):
         for position, r in enumerate(bounded_result, start=1):
             print('\t{:03}. {}'.format(position, r))
     print('*' * 80)
+
+
+def train_confidence(all_confidence_measurements, results_mapping):
+    confidence_training_data = []
+    for query_name, candidates_and_measures in all_confidence_measurements.items():
+        correct_result = results_mapping[query_name]
+        first_candidate_name, first_candidate_measure = candidates_and_measures[0]
+        if first_candidate_name != correct_result:
+            confidence_training_data.append(first_candidate_measure)
+
+    threshold = max(confidence_training_data)
+    threshold_filename = 'confidence_threshold.txt'
+    print(
+        f'Max confidence measure is: {threshold}.\n',
+        f'Saving in file {threshold_filename}'
+    )
+    with open(threshold_filename, 'w') as file:
+        file.write(str(threshold))
+
+    print("WARN: Exiting program because 'train_confidence' is True")
+    exit(0)
 
 
 def unzip_pitch_contours(pitch_contour_segmentations):

@@ -79,7 +79,7 @@ Recuperação baseada no índice NLSH
 o índice NLSH é usado na busca de vetores candidatos e estes são expandidos para fragmentos candidatos. Antes de extrair vetores NLSH, as notas longas são divididas em duas ou mais. Dessa forma, a recuração no NLSH é robusta para eliminar erros de notas longas e contra enganos de notas curtas unidas formando notas longas. A considerar a variação de tempo, a duração das notas foi ajustada. É valido lembrar que apenas o valor da nota é usado, ao invés da duração. Então os frames mais longos são modificados de 0.6l para 1.4l por 5 vezes para extrair mais pontos NLSH.
 
 Resultados:
-- Medida confiável (Confidence Mesurement):
+- Medida confiável (Confidence Measurement):
 Um cálculo é usado para medir a confiabilidade (C) do filtro 1 (PLSH).
 [Vide artigo página 2236]
 

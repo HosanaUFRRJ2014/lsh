@@ -113,11 +113,23 @@ def process_args():
         default=False
     )
     parser.add_argument(
+        "--train_confidence",
+        type=bool,
+        help=" ".join([
+            "If \"True\", confidence measurement will be in training mode,",
+            "which means that confidence of all the top X candidates",
+            "will be calculated.",
+            "If \"False\", only the measurement of the first result will be",
+            f"calculated. Defaults to False. {no_need_to_inform_warning}"
+        ]),
+        default=False
+    )
     parser.add_argument(
         "--num_queries",
         type=int,
         help=' '.join([
             f"If especified, limits number of queries for {SEARCH_ALL} method.",
+            "Gets the first 'num_queries' queries.",
             "Defaults to None."
         ]),
         default=None
@@ -130,6 +142,7 @@ def process_args():
     matching_algorithm = args.matching_algorithm
     use_ls = args.use_ls
     show_top_x = args.show_top
+    is_training_confidence = args.train_confidence
     num_queries = args.num_queries
 
     # Validate args. If any of them is invalid, exit program.
@@ -146,6 +159,7 @@ def process_args():
         matching_algorithm, \
         use_ls, \
         show_top_x, \
+        is_training_confidence, \
         num_queries
 
 
@@ -157,6 +171,7 @@ def main():
         matching_algorithm,  \
         use_ls,  \
         show_top_x, \
+        is_training_confidence, \
         num_queries = process_args()
 
     if method_name == SERIALIZE_PITCH_VECTORS:
@@ -165,7 +180,9 @@ def main():
         # Creating index(es)
         pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations()
         create_indexes(
-            pitch_contour_segmentations, index_types, num_permutations
+            pitch_contour_segmentations=pitch_contour_segmentations,
+            index_types=index_types,
+            num_permutations=num_permutations
         )
     elif method_name in SEARCH_METHODS:
         # Loading query and song pitch vectors
@@ -177,18 +194,22 @@ def main():
         song_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations()
 
         # Searching and applying matching algorithms
+        results_mapping = load_expected_results()
         results = search(
             query_pitch_contour_segmentations=query_pitch_contour_segmentations,
             song_pitch_contour_segmentations=song_pitch_contour_segmentations,
             index_types=index_types,
             matching_algorithm=matching_algorithm,
             use_ls=use_ls,
-            num_permutations=num_permutations
+            show_top_x=show_top_x,
+            is_training_confidence=is_training_confidence,
+            num_permutations=num_permutations,
+            results_mapping=results_mapping
         )
 
         # Results and MRR
         print_results(matching_algorithm, index_types, results, show_top_x)
-        mrr = calculate_mean_reciprocal_rank(results, show_top_x)
+        mrr = calculate_mean_reciprocal_rank(results, results_mapping, show_top_x)
 
         print('Mean Reciprocal Ranking (MRR): ', mrr)
 
