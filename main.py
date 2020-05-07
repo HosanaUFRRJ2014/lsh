@@ -104,7 +104,6 @@ def process_args():
         default=LINEAR_SCALING
     )
     parser.add_argument(
-    parser.add_argument(
         "--use_ls",
         type=bool,
         help=' '.join([
@@ -112,6 +111,16 @@ def process_args():
             f"Defaults to False. {no_need_to_inform_warning}"
         ]),
         default=False
+    )
+    parser.add_argument(
+    parser.add_argument(
+        "--num_queries",
+        type=int,
+        help=' '.join([
+            f"If especified, limits number of queries for {SEARCH_ALL} method.",
+            "Defaults to None."
+        ]),
+        default=None
     )
     args = parser.parse_args()
     num_permutations = args.number_of_permutations
@@ -121,6 +130,7 @@ def process_args():
     matching_algorithm = args.matching_algorithm
     use_ls = args.use_ls
     show_top_x = args.show_top
+    num_queries = args.num_queries
 
     # Validate args. If any of them is invalid, exit program.
     validate_program_args(
@@ -135,7 +145,8 @@ def process_args():
         num_permutations, \
         matching_algorithm, \
         use_ls, \
-        show_top_x
+        show_top_x, \
+        num_queries
 
 
 def main():
@@ -145,7 +156,8 @@ def main():
         num_permutations,  \
         matching_algorithm,  \
         use_ls,  \
-        show_top_x = process_args()
+        show_top_x, \
+        num_queries = process_args()
 
     if method_name == SERIALIZE_PITCH_VECTORS:
         serialize_pitch_contour_segmentations()
@@ -160,7 +172,7 @@ def main():
         if method_name == SEARCH:
             query_pitch_contour_segmentations = load_song_pitch_contour_segmentation(query_filename)
         elif method_name == SEARCH_ALL:
-            query_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations()
+            query_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations(num_queries)
 
         song_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations()
 
