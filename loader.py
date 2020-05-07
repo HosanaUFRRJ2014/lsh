@@ -91,6 +91,14 @@ def _load_all_audio_pitch_contour_segmentations(filenames_file, path, start, end
     end = end if end else len(audios_paths)
     for audio_path in audios_paths[start:end]:
         print('path: ', audio_path)
+        if audio_path in [
+            '../uniformiza_dataset/queries/004043.wav',
+            '../uniformiza_dataset/queries/004048.wav',
+            '../uniformiza_dataset/queries/004050.wav',
+            '../uniformiza_dataset/queries/004051.wav'
+        ]:
+            print(f'{audio_path}  skipped')
+            continue
         pitch_contour_segmentations.append(
             _load_audio_pitch_contour_segmentation(audio_path)
         )
