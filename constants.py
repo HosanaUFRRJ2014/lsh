@@ -23,6 +23,9 @@ EXPECTED_RESULTS = f'{PATH_TO_DATASET}/expected_results.list'
 # Path where dumped json files, such as inverted index and audio mapping, are.
 JSON_PATH = 'json_files'
 
+# Max number of serialized files per file
+BATCH_SIZE = 1000
+
 ##
 # Methods
 SERIALIZE_PITCH_VECTORS = 'serialize_pitches'

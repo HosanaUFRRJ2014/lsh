@@ -1,8 +1,12 @@
 # -*-coding:utf8;-*-
 from json import JSONEncoder, dump, load
 from math import ceil
+import multiprocessing
 import numpy as np
-from constants import JSON_PATH
+from constants import (
+    BATCH_SIZE,
+    JSON_PATH
+)
 from loader import (
     get_songs_count,
     get_queries_count,
@@ -28,16 +32,44 @@ def dump_structure(structure, structure_name, cls=NumpyArrayEncoder):
         dump(structure, json_file, cls=cls)
 
 
-def load_structure(structure_name):
+def load_structure(structure_name, as_numpy=True):
     '''
     Loads Numpy ndarray objects.
     '''
     filename = f'{JSON_PATH}/{structure_name}.json'
     with open(filename, 'r') as json_file:
         loaded = load(json_file)
-        loaded = np.asarray(loaded)
+
+        if as_numpy:
+            loaded = np.asarray(loaded)
 
     return loaded
+
+
+def _serialize(args):
+    # print(f'Batch {batch_id} of {batches_count}')
+    loader_function = args[0]
+    structure_name = args[1]
+    batch_id = args[2]
+    start = args[3]
+    end = args[4]
+    pitch_contour_segmentations = loader_function(start=start, end=end)
+    batch_filename = f'{structure_name}_{batch_id}'
+    dump_structure(
+        structure=pitch_contour_segmentations,
+        structure_name=batch_filename
+    )
+
+    print(
+        '%s says that %s%s is %s' % (
+            multiprocessing.current_process().name,
+            _serialize.__name__, batch_id, batch_filename
+        )
+    )
+
+    del pitch_contour_segmentations
+
+    return batch_filename
 
 
 def serialize_pitch_contour_segmentations():
@@ -45,11 +77,11 @@ def serialize_pitch_contour_segmentations():
     Serializes onsets, durations and pitch vectors of the songs and queries.
     '''
     counters_loaders_and_names = [
-        # (
-        #     get_songs_count,
-        #     load_all_songs_pitch_contour_segmentations,
-        #     'songs_pitch_contour_segmentations'
-        # ),
+        (
+            get_songs_count,
+            load_all_songs_pitch_contour_segmentations,
+            'songs_pitch_contour_segmentations'
+        ),
         (
             get_queries_count,
             load_all_queries_pitch_contour_segmentations,
@@ -58,25 +90,31 @@ def serialize_pitch_contour_segmentations():
     ]
 
     for get_count, loader_function, structure_name in counters_loaders_and_names:
-        audios_count = 100 # get_count()
+        audios_count = get_count()
 
-        size = ceil(audios_count / multiprocessing.cpu_count())  # BATCH_SIZE
-        serialized_files = []
-        batches_count = ceil(audios_count / size)
+        chunk_size = BATCH_SIZE
+        batches_count = ceil(audios_count / chunk_size)
+        num_processes = multiprocessing.cpu_count()
+        tasks = []
         start = 0
-        end = size
-        for batch_index in range(batches_count):
-            batch_id = batch_index + 1
-            print(f'Batch {batch_id} of {batches_count}')
-            pitch_contour_segmentations = loader_function(start=start, end=end)
-            batch_filename = f'{structure_name}_{batch_id}'
-            dump_structure(
-                structure=pitch_contour_segmentations,
-                structure_name=batch_filename
+        end = chunk_size
+        for batch_id in range(1, batches_count + 1):
+            tasks.append(
+                (loader_function, structure_name, batch_id, start, end)
             )
-            serialized_files.append(batch_filename)
             start = end
-            end += size
+            end += chunk_size
+
+        with multiprocessing.Pool(num_processes) as pool:
+            results = [
+                pool.apply_async(_serialize, (task, ))
+                for task in tasks
+            ]
+
+            serialized_files = [
+                result.get()
+                for result in results
+            ]
 
         # Saves serialized filenames in a file,
         # in order to process them in deserialization fase
@@ -87,29 +125,34 @@ def serialize_pitch_contour_segmentations():
         )
 
 
-def _deserialize_pitch_contour_segmentations(structure_name):
+def _deserialize_pitch_contour_segmentations(file_of_filenames):
     pitch_contour_segmentations = []
     try:
-        pitch_contour_segmentations = load_structure(
-            structure_name=structure_name
+        list_of_files = load_structure(
+            structure_name=file_of_filenames
         )
     except FileNotFoundError:
-        log_no_serialized_pitch_contour_segmentations_error(structure_name)
+        log_no_serialized_pitch_contour_segmentations_error(file_of_filenames)
         exit(1)
+
+    for filename in list_of_files:
+        batch_pitch_contours = load_structure(structure_name=filename)
+        pitch_contour_segmentations.extend(batch_pitch_contours)
+
     return pitch_contour_segmentations
 
 
 def deserialize_songs_pitch_contour_segmentations():
-    structure_name = 'songs_pitch_contour_segmentations'
+    file_of_filenames = 'songs_pitch_contour_segmentations_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
-        structure_name=structure_name
+        file_of_filenames=file_of_filenames
     )
     return pitch_contour_segmentations
 
 
 def deserialize_queries_pitch_contour_segmentations():
-    structure_name = 'queries_pitch_contour_segmentations'
+    file_of_filenames = 'queries_pitch_contour_segmentations_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
-        structure_name=structure_name
+        file_of_filenames=file_of_filenames
     )
     return pitch_contour_segmentations
