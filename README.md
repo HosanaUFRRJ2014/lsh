@@ -52,6 +52,7 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
     python main.py search -i $INDEX -f ../uniformiza_dataset/queries/000003.wav -ma $MATCHING_ALGORITHM
 
    INDEX = plsh_index ou nlsh_index
+   
    MATCHING_ALGORITHM = opções: ls, bals, ra, ktra
 
 ### Mais opções
