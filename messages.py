@@ -16,7 +16,7 @@ def log_bare_exception(err):
 
 def log_invalid_index_type(index_types):
     message = ' '.join([
-        f"'{index_types}' is(are) not (a) valid(s) index(es) type(s).",
+        f"'{index_types}' is(are) not (a) valid index(es) type(s).",
         f"Options are {INDEX_TYPES}."
     ])
     logging.error(message)
@@ -24,7 +24,7 @@ def log_invalid_index_type(index_types):
 
 def log_invalid_matching_algorithm_error(matching_algorithm):
     message = ' '.join([
-        f"Matching Algorithm '{matching_algorithm}' is invalid.",
+        f"Value '{matching_algorithm}' for matching algorithm is invalid.",
         f"Valid algorithms are: {MATCHING_ALGORITHMS}."
     ])
     logging.error(message)
