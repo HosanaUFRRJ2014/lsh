@@ -8,6 +8,12 @@ from constants import (
 )
 
 
+def log_bare_exception(err):
+    message = 'A unexpected problem occured.'
+    logging.error(err)
+    logging.error(message)
+
+
 def log_invalid_index_type(index_types):
     message = ' '.join([
         f"'{index_types}' is(are) not (a) valid(s) index(es) type(s).",
@@ -25,7 +31,16 @@ def log_invalid_matching_algorithm_error(matching_algorithm):
 
 
 def log_invalid_method_error(method_name):
-    message = "Method '{method_name}' is invalid. Valid methods are: {METHODS}."
+    message = f"Method '{method_name}' is invalid. Valid methods are: {METHODS}."
+    logging.error(message)
+
+
+def log_no_confidence_measurement_found_error():
+    message = ' '.join([
+        'Confidence measurement file was not found.',
+        'Train confidence measurement first. Example usage:',
+        "'python main.py search_all --train_confidence true'"
+    ])
     logging.error(message)
 
 
@@ -45,5 +60,14 @@ def log_no_serialized_pitch_contour_segmentations_error(structure_name):
         f"ERROR: Couldn't load {structure_name}.",
         f"Use method '{SERIALIZE_PITCH_VECTORS}',",
         "to serialize pitch vectors first."
+    ])
+    logging.error(message)
+
+
+def log_wrong_confidence_measurement_error(value):
+    message = ' '.join([
+        f'Value {value} of type {type(value)} is not a valid',
+        'confidence measurement value.',
+        'Expected type <float> .'
     ])
     logging.error(message)

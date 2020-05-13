@@ -28,7 +28,7 @@ from json_manipulator import (
 from lsh import (
     apply_matching_algorithm,
     create_indexes,
-    search,
+    search_indexes,
     calculate_mean_reciprocal_rank
 )
 from loader import (
@@ -116,7 +116,8 @@ def process_args():
         "--train_confidence",
         type=bool,
         help=" ".join([
-            "If \"True\", confidence measurement will be in training mode,",
+            f"If \"True\" and informed alongside {SEARCH_ALL} method,",
+            "confidence measurement will be in training mode,",
             "which means that confidence of all the top X candidates",
             "will be calculated.",
             "If \"False\", only the measurement of the first result will be",
@@ -197,7 +198,7 @@ def main():
 
         # Searching and applying matching algorithms
         results_mapping = load_expected_results()
-        results = search(
+        results = search_indexes(
             query_pitch_contour_segmentations=query_pitch_contour_segmentations,
             song_pitch_contour_segmentations=song_pitch_contour_segmentations,
             index_types=index_types,

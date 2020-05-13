@@ -38,12 +38,15 @@ from messages import (
 
 from utils import (
     percent,
-    print_confidence_measurements,
+    get_confidence_measurement,
     train_confidence,
     unzip_pitch_contours
 )
 
-__all__ = ["create_indexes", "search"]
+__all__ = [
+    "create_indexes",
+    "search_indexes"
+]
 
 
 MAX_FLOAT = float_info.max
@@ -634,7 +637,7 @@ def calculate_mean_reciprocal_rank(all_queries_distances, results_mapping, show_
 def calculate_confidence_measurement(
     results, show_top_x, is_training_data=False, results_mapping=None
 ):
-    all_confidence_measurements = {}
+    all_confidence_measurements_data = {}
     for query_name, result in results.items():
         query_confidence_measurements = []
         bounded_result = result[:show_top_x]
@@ -655,19 +658,51 @@ def calculate_confidence_measurement(
             # first result
             if not is_training_data:
                 break
-        all_confidence_measurements[query_name] = query_confidence_measurements
+        all_confidence_measurements_data[query_name] = query_confidence_measurements
 
     if is_training_data:
-        train_confidence(all_confidence_measurements, results_mapping)
+        train_confidence(all_confidence_measurements_data, results_mapping)
 
-    return all_confidence_measurements
+    return all_confidence_measurements_data
+
+
+def clip_false_candidates(all_confidence_measurements_data):
+    """
+    The clip with the false first ranked candidate is put into the next filter.
+    """
+    removed_candidates = []
+    above_threshold_count = 0
+    candidate_confidence_measurement = [
+        data[0]
+        for data in list(
+            all_confidence_measurements_data.values()
+        )
+    ][0]
+
+    threshold = get_confidence_measurement()
+
+    measurement = candidate_confidence_measurement[-1]
+    if measurement > threshold:
+        above_threshold_count += 1
+    else:
+        removed_candidates.append(
+            candidate_confidence_measurement[0]
+        )
+
+    no_need_of_second_filter = above_threshold_count == len(
+        all_confidence_measurements_data
+    )
+
+    return removed_candidates, no_need_of_second_filter
 
 
 def _create_index(pitch_contour_segmentations, index_type, num_permutations):
     # Indexing
+    print('Tokenizing...')
     td_matrix, audio_mapping, original_positions_mapping = tokenize(
         pitch_contour_segmentations, index_type
     )
+    print('Generating inverted index...')
     inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
     # Serializing indexes
@@ -677,6 +712,7 @@ def _create_index(pitch_contour_segmentations, index_type, num_permutations):
         # (audio_mapping, 'audio_mapping'),
         # (original_positions_mapping, 'original_positions_mapping')
     ]
+    print(f'Saving {index_type_name} in file')
     for index, index_name in indexes_and_indexes_names:
         dump_structure(
             index,
@@ -689,11 +725,12 @@ def create_indexes(pitch_contour_segmentations, index_types, num_permutations):
         _create_index(pitch_contour_segmentations, index_type, num_permutations)
 
 
-def _search_in_index(
+def _search_index(
     query_pitch_contour_segmentations,
     inverted_index,
     songs_list,
     index_type,
+    removed_candidates,
     num_permutations
 ):
     query_td_matrix, _query_audio_mapping, _query_positions_mapping = tokenize(
@@ -705,10 +742,18 @@ def _search_in_index(
     candidates_indexes = (np.nonzero(candidates_count)[0] - 1)
     candidates = songs_list[candidates_indexes]
 
-    return candidates_indexes, candidates
+    # Clip with the false first ranked candidates is put into the next filter.
+    if removed_candidates:
+        candidates = np.array([
+            candidate
+            for candidate in candidates
+            if candidate[0] not in removed_candidates
+        ])
+
+    return candidates
 
 
-def search(
+def search_indexes(
     query_pitch_contour_segmentations,
     song_pitch_contour_segmentations,
     index_types,
@@ -729,6 +774,7 @@ def search(
         query_pitch_contour_segmentations
     )
     results = None
+    removed_candidates = []
     for index_type in index_types:
         # Recovering dumped index
         try:
@@ -748,24 +794,25 @@ def search(
             exit(1)
 
         # Searching songs
-        candidates_indexes, candidates = _search_in_index(
+        candidates = _search_index(
             query_pitch_contour_segmentations,
             inverted_index=inverted_index,
             songs_list=song_pitch_vectors,
             index_type=index_type,
+            removed_candidates=removed_candidates,
             num_permutations=num_permutations
         )
 
         results = apply_matching_algorithm(
             choosed_algorithm=matching_algorithm,
             query=query_pitch_vectors,
-            candidates_indexes=candidates_indexes,
             candidates=candidates,
+            index_type=index_type,
             original_positions_mapping=original_positions_mapping,
             use_ls=use_ls
         )
 
-        all_confidence_measurements = calculate_confidence_measurement(
+        all_confidence_measurements_data = calculate_confidence_measurement(
             results=results,
             show_top_x=show_top_x,
             is_training_data=is_training_confidence,
@@ -773,14 +820,11 @@ def search(
         )
 
         if not is_training_confidence:
-            print('TO BE IMPLEMENTED YET')
-            # print_confidence_measurements(all_confidence_measurements)
-            # TODO: get confidence from file
-            # TODO: Stop if confidence measurement is higher than the threshold
-            # TODO: The threshold should be automatically optimized so
-            # that the true candidates are returned directly and the clip
-            # with the false first ranked candidate is put into the next
-            # filter. In the QBH system, we randomly select part of
-            # query clips as the training set to obtain the threshold
+            removed_candidates, all_passed = clip_false_candidates(
+                all_confidence_measurements_data
+            )
+            if all_passed or len(index_types) == 1:
+                print("There is no need of a second filter")
+                break
 
     return results

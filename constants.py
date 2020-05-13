@@ -20,6 +20,9 @@ QUERIES_PATH = 'queries'
 
 EXPECTED_RESULTS = f'{PATH_TO_DATASET}/expected_results.list'
 
+THRESHOLD_FILENAME = 'confidence_threshold.txt'
+
+
 # Path where dumped json files, such as inverted index and audio mapping, are.
 JSON_PATH = 'json_files'
 
