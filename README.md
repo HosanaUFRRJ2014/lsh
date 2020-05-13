@@ -56,7 +56,7 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
    MATCHING_ALGORITHM = opções: ls, bals, ra, ktra
 
 ### Buscar uma música no índice NLSH e depois no PLSH:
-    python main.py search -i nlsh_index plsh_index -f ../uniformiza_dataset/songs_wav/000003.wav
+    python main.py search -i nlsh_index plsh_index -f ../uniformiza_dataset/queries/000003.wav
 
 ### Mais opções:
     python main.py --help

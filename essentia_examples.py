@@ -9,7 +9,8 @@ from math import floor
 
 # Essentia usage examples
 
-filepath = '/home/hosana/TCC/uniformiza_dataset/songs_wav/000002.wav'
+filepath = '/home/hosana/TCC/uniformiza_dataset/songs_wav/000003.wav'
+# filepath = '/home/hosana/TCC/uniformiza_dataset/queries/000016.wav'
 
 #
 # # Music feature extraction
@@ -46,8 +47,8 @@ contour_segmentator = PitchContourSegmentation()
 onsets, durations, midipitches = contour_segmentator(pitch_values, audio)
 
 # Gets pitch_values fingerprint
-Fingerprinter = Chromaprinter()
-fingerprint = Fingerprinter(pitch_values)
+Fingerprinter = Chromaprinter(maxLength=5)
+fingerprint = Fingerprinter(audio)
 print('fingerprint')
 print(fingerprint)
 
