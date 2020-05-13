@@ -48,12 +48,15 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 ### Cria índice NLSH:
     python main.py create_index -i plsh_index
 
-### Buscar uma música:
+### Buscar uma música num índice:
     python main.py search -i $INDEX -f ../uniformiza_dataset/queries/000003.wav -ma $MATCHING_ALGORITHM
 
    INDEX = plsh_index ou nlsh_index
    
    MATCHING_ALGORITHM = opções: ls, bals, ra, ktra
+
+### Buscar uma música no índice NLSH e depois no PLSH:
+    python main.py search -i nlsh_index plsh_index -f ../uniformiza_dataset/songs_wav/000003.wav
 
 ### Mais opções:
     python main.py --help
