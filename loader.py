@@ -85,10 +85,9 @@ def _load_audio_pitch_contour_segmentation(audio_path):
     return audio_path, pitch_values, onsets, durations
 
 
-def _load_all_audio_pitch_contour_segmentations(filenames_file, path, start, end):
+def _load_all_audio_pitch_contour_segmentations(filenames_file, path, start, end=None):
     pitch_contour_segmentations = []
     audios_paths = _read_dataset_names(filenames_file, path)
-    end = end if end else len(audios_paths)
     for audio_path in audios_paths[start:end]:
         print('path: ', audio_path)
         if audio_path in [

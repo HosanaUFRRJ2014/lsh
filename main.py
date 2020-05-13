@@ -125,11 +125,12 @@ def process_args():
         default=False
     )
     parser.add_argument(
-        "--num_queries",
+        "--num_audios",
         type=int,
         help=' '.join([
-            f"If especified, limits number of queries for {SEARCH_ALL} method.",
-            "Gets the first 'num_queries' queries.",
+            f"If especified, limits number of audios for {CREATE_INDEX} and",
+            f"{SEARCH_ALL} methods.",
+            "Gets the first 'num_audios' audios.",
             "Defaults to None."
         ]),
         default=None
@@ -143,13 +144,14 @@ def process_args():
     use_ls = args.use_ls
     show_top_x = args.show_top
     is_training_confidence = args.train_confidence
-    num_queries = args.num_queries
+    num_audios = args.num_audios
 
     # Validate args. If any of them is invalid, exit program.
     validate_program_args(
         method_name=method_name,
         matching_algorithm=matching_algorithm,
-        index_types=index_types
+        index_types=index_types,
+        is_training_confidence=is_training_confidence
     )
 
     return method_name, \
@@ -160,7 +162,7 @@ def process_args():
         use_ls, \
         show_top_x, \
         is_training_confidence, \
-        num_queries
+        num_audios
 
 
 def main():
@@ -172,13 +174,13 @@ def main():
         use_ls,  \
         show_top_x, \
         is_training_confidence, \
-        num_queries = process_args()
+        num_audios = process_args()
 
     if method_name == SERIALIZE_PITCH_VECTORS:
         serialize_pitch_contour_segmentations()
     elif method_name == CREATE_INDEX:
         # Creating index(es)
-        pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations()
+        pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_audios)
         create_indexes(
             pitch_contour_segmentations=pitch_contour_segmentations,
             index_types=index_types,
@@ -189,7 +191,7 @@ def main():
         if method_name == SEARCH:
             query_pitch_contour_segmentations = load_song_pitch_contour_segmentation(query_filename)
         elif method_name == SEARCH_ALL:
-            query_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations(num_queries)
+            query_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations(num_audios)
 
         song_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations()
 

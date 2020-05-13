@@ -125,7 +125,7 @@ def serialize_pitch_contour_segmentations():
         )
 
 
-def _deserialize_pitch_contour_segmentations(file_of_filenames, num_queries=None):
+def _deserialize_pitch_contour_segmentations(file_of_filenames, num_audios=None):
     pitch_contour_segmentations = []
     try:
         list_of_files = load_structure(
@@ -137,8 +137,8 @@ def _deserialize_pitch_contour_segmentations(file_of_filenames, num_queries=None
 
     for filename in list_of_files:
         batch_pitch_contours = load_structure(structure_name=filename)
-        if num_queries and len(batch_pitch_contours) > num_queries:
-            batch_pitch_contours = batch_pitch_contours[:num_queries]
+        if num_audios and len(batch_pitch_contours) > num_audios:
+            batch_pitch_contours = batch_pitch_contours[:num_audios]
             pitch_contour_segmentations = batch_pitch_contours
             break
         pitch_contour_segmentations.extend(batch_pitch_contours)
@@ -146,19 +146,20 @@ def _deserialize_pitch_contour_segmentations(file_of_filenames, num_queries=None
     return pitch_contour_segmentations
 
 
-def deserialize_songs_pitch_contour_segmentations():
+def deserialize_songs_pitch_contour_segmentations(num_audios=None):
     file_of_filenames = 'songs_pitch_contour_segmentations_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
-        file_of_filenames=file_of_filenames
+        file_of_filenames=file_of_filenames,
+        num_audios=num_audios
     )
     return pitch_contour_segmentations
 
 
-def deserialize_queries_pitch_contour_segmentations(num_queries=None):
+def deserialize_queries_pitch_contour_segmentations(num_audios=None):
     file_of_filenames = 'queries_pitch_contour_segmentations_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
         file_of_filenames=file_of_filenames,
-        num_queries=num_queries
+        num_audios=num_audios
     )
 
     return pitch_contour_segmentations
