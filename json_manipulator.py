@@ -3,6 +3,7 @@ from json import JSONEncoder, dump, load
 from math import ceil
 import multiprocessing
 import numpy as np
+from scipy.sparse import isspmatrix
 from constants import (
     BATCH_SIZE,
     JSON_PATH
@@ -27,6 +28,7 @@ def dump_structure(structure, structure_name, cls=NumpyArrayEncoder):
     '''
     Dumps Numpy ndarray or Python objects. Defaults to numpy objects.
     '''
+
     filename = f'{JSON_PATH}/{structure_name}.json'
     with open(filename, 'w') as json_file:
         dump(structure, json_file, cls=cls)

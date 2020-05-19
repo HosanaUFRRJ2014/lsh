@@ -1,5 +1,10 @@
 # -*-coding:utf8;-*-
 import numpy as np
+from scipy.sparse import (
+    isspmatrix_dok,
+    load_npz,
+    save_npz
+)
 from constants import (
     INDEX_TYPES,
     MATCHING_ALGORITHMS,
@@ -48,6 +53,11 @@ def is_create_index_or_search_method(args):
 
     return is_index_method
 
+def load_sparse_matrix(structure_name):
+    """Loads a sparse matrix from a file in .npz format."""
+    filename = f'{structure_name}.npz'
+    matrix = load_npz(filename)
+    return matrix
 
 def percent(part, whole):
     '''
@@ -83,6 +93,18 @@ def print_results(matching_algorithm, index_type, results, show_top_x):
         for position, r in enumerate(bounded_result, start=1):
             print('\t{:03}. {}'.format(position, r))
     print('*' * 80)
+
+
+def save_sparse_matrix(structure, structure_name):
+    """Save a sparse matrix to a file using .npz format. If the matrix is
+    dok-like its converted to csr and dok type is NOT restaured in load phase.
+    """
+    if isspmatrix_dok(structure):
+        # save_npz does not support dok matrix
+        structure = structure.tocsr()
+
+    filename = f'{structure_name}.npz'
+    save_npz(filename, structure)
 
 
 def train_confidence(all_confidence_measurements, results_mapping):
