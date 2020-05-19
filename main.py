@@ -79,7 +79,7 @@ def process_args():
         default=''
     )
     parser.add_argument(
-        "--number_of_permutations",
+        "--num_permutations",
         "-np",
         type=int,
         help=help_msg,
@@ -137,7 +137,7 @@ def process_args():
         default=None
     )
     args = parser.parse_args()
-    num_permutations = args.number_of_permutations
+    num_permutations = args.num_permutations
     method_name = args.method
     index_types = args.index_types if args.index_types else []
     query_filename = args.query_filename

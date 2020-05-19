@@ -546,6 +546,7 @@ def search_indexes(
             use_ls=use_ls
         )
 
+        print('Calculating Confidence Measurement... (step 5/5)')
         all_confidence_measurements_data = calculate_confidence_measurement(
             results=results,
             show_top_x=show_top_x,
@@ -554,6 +555,7 @@ def search_indexes(
         )
 
         if not is_training_confidence:
+            print_confidence_measurements(all_confidence_measurements_data)
             removed_candidates, all_passed = clip_false_candidates(
                 all_confidence_measurements_data
             )

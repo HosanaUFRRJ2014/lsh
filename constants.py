@@ -11,6 +11,9 @@ SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
 
 ##
 # Paths vars
+# Path where dumped files, such as inverted index, is.
+FILES_PATH = 'generated_files'
+
 PATH_TO_DATASET = '../uniformiza_dataset'
 FILENAMES_OF_SONGS = f'{PATH_TO_DATASET}/wav_songs.list'
 WAV_SONGS_PATH = 'songs_wav'
@@ -20,11 +23,7 @@ QUERIES_PATH = 'queries'
 
 EXPECTED_RESULTS = f'{PATH_TO_DATASET}/expected_results.list'
 
-THRESHOLD_FILENAME = 'confidence_threshold.txt'
-
-
-# Path where dumped json files, such as inverted index and audio mapping, are.
-JSON_PATH = 'json_files'
+THRESHOLD_FILENAME = f'{FILES_PATH}/confidence_threshold.txt'
 
 # Max number of serialized files per file
 BATCH_SIZE = 1000

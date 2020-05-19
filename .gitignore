@@ -5,4 +5,10 @@
 
 __pycache__/
 
-json_files/
+generated_files/
+
+diagrama-TCC-v1\.jpg
+
+expected results
+
+\.vscode/

@@ -6,6 +6,7 @@ from scipy.sparse import (
     save_npz
 )
 from constants import (
+    FILES_PATH,
     INDEX_TYPES,
     MATCHING_ALGORITHMS,
     METHODS,
@@ -13,8 +14,8 @@ from constants import (
     THRESHOLD_FILENAME
 )
 from messages import (
-    log_bare_exception,
-    log_invalid_index_type,
+    log_bare_exception_error,
+    log_invalid_index_type_error,
     log_invalid_matching_algorithm_error,
     log_invalid_method_error,
     log_no_confidence_measurement_found_error,
@@ -36,7 +37,7 @@ def get_confidence_measurement():
     except ValueError as value_err:
         log_wrong_confidence_measurement_error(content)
     except Exception as err:
-        log_bare_exception(err)
+        log_bare_exception_error(err)
 
     return threshold
 
@@ -55,7 +56,7 @@ def is_create_index_or_search_method(args):
 
 def load_sparse_matrix(structure_name):
     """Loads a sparse matrix from a file in .npz format."""
-    filename = f'{structure_name}.npz'
+    filename = f'{FILES_PATH}/{structure_name}.npz'
     matrix = load_npz(filename)
     return matrix
 
@@ -103,7 +104,7 @@ def save_sparse_matrix(structure, structure_name):
         # save_npz does not support dok matrix
         structure = structure.tocsr()
 
-    filename = f'{structure_name}.npz'
+    filename = f'{FILES_PATH}/{structure_name}.npz'
     save_npz(filename, structure)
 
 
@@ -169,7 +170,7 @@ def validate_program_args(**kwargs):
         log_invalid_matching_algorithm_error(matching_algorithm)
         exit(1)
     if invalid_index_type:
-        log_invalid_index_type(index_types)
+        log_invalid_index_type_error(index_types)
         exit(1)
     if invalid_confidence_measurement:
         exit(1)

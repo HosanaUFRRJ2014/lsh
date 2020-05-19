@@ -6,7 +6,7 @@ import numpy as np
 from scipy.sparse import isspmatrix
 from constants import (
     BATCH_SIZE,
-    JSON_PATH
+    FILES_PATH
 )
 from loader import (
     get_songs_count,
@@ -29,7 +29,7 @@ def dump_structure(structure, structure_name, cls=NumpyArrayEncoder):
     Dumps Numpy ndarray or Python objects. Defaults to numpy objects.
     '''
 
-    filename = f'{JSON_PATH}/{structure_name}.json'
+    filename = f'{FILES_PATH}/{structure_name}.json'
     with open(filename, 'w') as json_file:
         dump(structure, json_file, cls=cls)
 
@@ -38,7 +38,7 @@ def load_structure(structure_name, as_numpy=True):
     '''
     Loads Numpy ndarray objects.
     '''
-    filename = f'{JSON_PATH}/{structure_name}.json'
+    filename = f'{FILES_PATH}/{structure_name}.json'
     with open(filename, 'r') as json_file:
         loaded = load(json_file)
 

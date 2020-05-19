@@ -8,13 +8,12 @@ from constants import (
 )
 
 
-def log_bare_exception(err):
+def log_bare_exception_error(err):
     message = 'A unexpected problem occured.'
     logging.error(err)
     logging.error(message)
 
 
-def log_invalid_index_type(index_types):
 def log_could_not_calculate_mrr_warning(query_name):
     message = " ".join([
         f"Could not calculate Mean Reciprocal Ranking for \"{query_name}\",",
@@ -23,6 +22,7 @@ def log_could_not_calculate_mrr_warning(query_name):
     logging.warn(message)
 
 
+def log_invalid_index_type_error(index_types):
     message = ' '.join([
         f"'{index_types}' is(are) not (a) valid index(es) type(s).",
         f"Options are {INDEX_TYPES}."
