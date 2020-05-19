@@ -25,6 +25,7 @@ mean = Mean()
 
 
 def _mean_substract(pitch_vector):
+    pitch_vector = np.array(pitch_vector, dtype=np.float32)
     return pitch_vector - mean.compute(pitch_vector)
 
 
