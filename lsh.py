@@ -18,6 +18,7 @@ from json_manipulator import (
 from loader import load_expected_results
 from matching_algorithms import apply_matching_algorithm
 from messages import (
+    log_could_not_calculate_mrr_warning,
     log_no_dumped_files_error
 )
 
@@ -327,6 +328,7 @@ def calculate_mean_reciprocal_rank(all_queries_distances, results_mapping, show_
     Rank (MRR).
     '''
     reciprocal_ranks = []
+    mean_reciprocal_rank = None
     number_of_queries = len(all_queries_distances.keys())
     for query_name, results in all_queries_distances.items():
         # bounded_results = results[:show_top_x]
@@ -335,12 +337,20 @@ def calculate_mean_reciprocal_rank(all_queries_distances, results_mapping, show_
         # quando o resultado não estiver no bounded_results
         # 'results' is a list of tuples (song_name, distance)
         candidates_names = [result[0] for result in results]
-        correct_result_index = candidates_names.index(correct_result)
-        rank = correct_result_index + 1
-        reciprocal_rank = 1 / rank
+
+        try:
+            correct_result_index = candidates_names.index(correct_result)
+            rank = correct_result_index + 1
+            reciprocal_rank = 1 / rank
+        except ValueError:
+            log_could_not_calculate_mrr_warning(query_name)
+            reciprocal_rank = None
+            exit(1)
+
         reciprocal_ranks.append(reciprocal_rank)
 
-    mean_reciprocal_rank = sum(reciprocal_ranks) / number_of_queries
+    if all(reciprocal_ranks):
+        mean_reciprocal_rank = sum(reciprocal_ranks) / number_of_queries
 
     return mean_reciprocal_rank
 

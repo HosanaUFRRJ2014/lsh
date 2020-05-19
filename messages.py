@@ -15,6 +15,14 @@ def log_bare_exception(err):
 
 
 def log_invalid_index_type(index_types):
+def log_could_not_calculate_mrr_warning(query_name):
+    message = " ".join([
+        f"Could not calculate Mean Reciprocal Ranking for \"{query_name}\",",
+        "because correct result was not found among candidates."
+    ])
+    logging.warn(message)
+
+
     message = ' '.join([
         f"'{index_types}' is(are) not (a) valid index(es) type(s).",
         f"Options are {INDEX_TYPES}."
