@@ -197,9 +197,7 @@ def tokenize(pitch_contour_segmentations, index_type):
     td_matrix = np.zeros([len(vocabulary), number_of_audios])
 
     for i in range(number_of_audios):
-        # TODO: Verify if I can really ignore empty ones. Why there are empties?
-        if td_matrix_temp[i]:
-            td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
+        td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
 
     del td_matrix_temp
     td_matrix_temp = None
@@ -231,7 +229,7 @@ def generate_inverted_index(td_matrix, permutation_count):
     # First position will never be occupied, in order to difference 0 from
     # a real position in matrix of indexes
     EMPTY_ARRAY = np.array([])
-    inverted_index_data = np.array([EMPTY_ARRAY], dtype=np.ndarray)
+    inverted_index_data = [EMPTY_ARRAY]
 
     fingerprints = np.array(range(1, num_columns + 1))
     for j in range(td_matrix.shape[1]):
@@ -259,12 +257,11 @@ def generate_inverted_index(td_matrix, permutation_count):
 
                     if is_empty_position:
                         # Appends np.array([j+1]) in inverted_index_data
-                        inverted_index_data = np.append(
-                            inverted_index_data,
-                            [j + 1]
+                        inverted_index_data.append(
+                            np.array([j + 1])
                         )
                         # Gets its position and updates matrix with it
-                        new_data_index = inverted_index_data.size - 1
+                        new_data_index = len(inverted_index_data) - 1
                         matrix_of_indexes[first_index, second_index] = new_data_index
                     else:
                         # Retrieve array from inverted_index_data
@@ -277,6 +274,7 @@ def generate_inverted_index(td_matrix, permutation_count):
                         # update inverted_index_data with the updated_array
                         inverted_index_data[data_position] = updated_array
     
+    inverted_index_data = np.array(inverted_index_data)
     return matrix_of_indexes, inverted_index_data
 
 
@@ -306,19 +304,19 @@ def search_inverted_index(
                 # TODO: Verify if I can ignore empties.
                 # Shouldn't I remove zero pitches at the reading moment, like ref [16]
                 # of the base article says?
-                if non_zero_indexes[0].size > 0:
-                    second_index = int(
-                        SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
-                    ) - 1
+                # if non_zero_indexes[0].size > 0:
+                second_index = int(
+                    SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
+                ) - 1
 
-                    try:
-                        data_position = matrix_of_indexes[first_index, second_index]
-                        is_filled_position = data_position != 0
-                        if is_filled_position:
-                            retrieved_pitch_vector = inverted_index_data[data_position]
-                            candidates_count[retrieved_pitch_vector] += 1
-                    except IndexError as e:
-                        continue
+                try:
+                    data_position = matrix_of_indexes[first_index, second_index]
+                    is_filled_position = data_position != 0
+                    if is_filled_position:
+                        retrieved_pitch_vector = inverted_index_data[data_position]
+                        candidates_count[retrieved_pitch_vector] += 1
+                except IndexError as e:
+                    continue
     return candidates_count
 
 
@@ -535,8 +533,23 @@ def search_indexes(
             removed_candidates=removed_candidates,
             num_permutations=num_permutations
         )
-
-        print('Applying matching algorithm... (step 4/5)')
+        print('\tCandidates count: ', len(candidates))
+        # print('\tCandidates:')
+        candidates_names = [c[0] for c in candidates]
+        # for candidate_name in candidates_names:
+        query_name = query_pitch_contour_segmentations[0][0]
+        correct_result = results_mapping.get(query_name)
+        # for position, name in enumerate(candidates_names, start=1):
+        #     print(f'\t\t{position}. ', name)
+        print('Query: ', query_name)
+        is_in_list = correct_result in candidates_names
+        print('Result: ', correct_result)
+        print(f'({index_type}) Correct result in retrieved list? ', is_in_list)
+        if is_in_list:
+            print('\tPosition: ', candidates_names.index(correct_result)+1)
+        # print('Exiting program...')
+        exit(0)
+        # print('Applying matching algorithm... (step 4/5)')
         results = apply_matching_algorithm(
             choosed_algorithm=matching_algorithm,
             query=query_pitch_vectors,
