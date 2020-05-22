@@ -2,7 +2,6 @@
 from copy import copy
 from math import floor, ceil
 import numpy as np
-from scipy.sparse import dok_matrix
 
 from constants import (
     PLSH_INDEX,
@@ -24,13 +23,9 @@ from messages import (
 
 from utils import (
     get_confidence_measurement,
-    load_sparse_matrix,
-    print_confidence_measurements,
-    save_sparse_matrix,
     train_confidence,
     unzip_pitch_contours
 )
-
 
 __all__ = [
     "create_indexes",
@@ -221,15 +216,11 @@ def generate_inverted_index(td_matrix, permutation_count):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT  # + SELECTION_FUNCTION_COUNT
     num_columns = td_matrix.shape[0]  # + 1
-
-    matrix_of_indexes = dok_matrix(
-        (num_lines, num_columns), dtype=np.int
+    inverted_index = np.zeros(
+        (num_lines, num_columns),
+        # dtype=np.ndarray
+        dtype=int
     )
-
-    # First position will never be occupied, in order to difference 0 from
-    # a real position in matrix of indexes
-    EMPTY_ARRAY = np.array([])
-    inverted_index_data = [EMPTY_ARRAY]
 
     fingerprints = np.array(range(1, num_columns + 1))
     for j in range(td_matrix.shape[1]):
@@ -251,38 +242,24 @@ def generate_inverted_index(td_matrix, permutation_count):
                     second_index = int(
                         SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
                     ) - 1
-
-                    data_position = matrix_of_indexes[first_index, second_index]
-                    is_empty_position = data_position == 0
-
-                    if is_empty_position:
-                        # Appends np.array([j+1]) in inverted_index_data
-                        inverted_index_data.append(
-                            np.array([j + 1])
-                        )
-                        # Gets its position and updates matrix with it
-                        new_data_index = len(inverted_index_data) - 1
-                        matrix_of_indexes[first_index, second_index] = new_data_index
-                    else:
-                        # Retrieve array from inverted_index_data
-                        array_to_update = inverted_index_data[data_position]
-                        # Appends [j+1] to it
-                        updated_array = np.append(
-                            array_to_update,
+                    # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
+                    if isinstance(inverted_index[first_index][second_index], np.ndarray):
+                        inverted_index[first_index][second_index] = np.append(
+                            inverted_index[first_index][second_index],
                             [j + 1]
                         )
-                        # update inverted_index_data with the updated_array
-                        inverted_index_data[data_position] = updated_array
-    
-    inverted_index_data = np.array(inverted_index_data)
-    return matrix_of_indexes, inverted_index_data
+                    else:
+                        inverted_index[first_index][second_index] = np.array([j + 1])
+                # print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
+
+    return inverted_index
 
 
 def search_inverted_index(
-    query_td_matrix, matrix_of_indexes, inverted_index_data, permutation_count
+    query_td_matrix, inverted_index, permutation_count
 ):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    candidates_count = np.zeros((matrix_of_indexes.shape[1] + 1, ), dtype=int)
+    candidates_count = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT
     num_columns = query_td_matrix.shape[0]  # + 1
 
@@ -304,19 +281,18 @@ def search_inverted_index(
                 # TODO: Verify if I can ignore empties.
                 # Shouldn't I remove zero pitches at the reading moment, like ref [16]
                 # of the base article says?
-                # if non_zero_indexes[0].size > 0:
-                second_index = int(
-                    SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
-                ) - 1
+                if non_zero_indexes[0].size > 0:
+                    second_index = int(
+                        SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
+                    ) - 1
 
-                try:
-                    data_position = matrix_of_indexes[first_index, second_index]
-                    is_filled_position = data_position != 0
-                    if is_filled_position:
-                        retrieved_pitch_vector = inverted_index_data[data_position]
-                        candidates_count[retrieved_pitch_vector] += 1
-                except IndexError as e:
-                    continue
+                    try:
+                        retrieved_pitch_vector = inverted_index[first_index][second_index]
+                        if not isinstance(retrieved_pitch_vector, int):
+                            candidates_count[retrieved_pitch_vector] += 1
+                        # print("retrieved pitch vector for fingerprint %d : "%(second_index), retrieved_pitch_vector)
+                    except IndexError as e:
+                        continue
     return candidates_count
 
 
@@ -417,26 +393,21 @@ def clip_false_candidates(all_confidence_measurements_data):
 
 def _create_index(pitch_contour_segmentations, index_type, num_permutations):
     # Indexing
-    print('Tokenizing... (step 1/3)')
+    print('Tokenizing...')
     td_matrix, audio_mapping, original_positions_mapping = tokenize(
         pitch_contour_segmentations, index_type
     )
-    print('Generating inverted index... (step 2/3)')
-    matrix_of_indexes, inverted_index_data = generate_inverted_index(td_matrix, num_permutations)
+    print('Generating inverted index...')
+    inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
     # Serializing indexes
-    index_type_name = f'inverted_{index_type}_data'
-    matrix_of_indexes_name = f'matrix_of_{index_type}'
+    index_type_name = f'inverted_{index_type}'
     indexes_and_indexes_names = [
-        (inverted_index_data, index_type_name),
+        (inverted_index, index_type_name),
         # (audio_mapping, 'audio_mapping'),
         # (original_positions_mapping, 'original_positions_mapping')
     ]
-    print(
-        f'Saving {index_type_name} and {matrix_of_indexes_name}',
-        ' in files (step 3/3)'
-    )
-    save_sparse_matrix(matrix_of_indexes, structure_name=matrix_of_indexes_name)
+    print(f'Saving {index_type_name} in file')
     for index, index_name in indexes_and_indexes_names:
         dump_structure(
             index,
@@ -451,20 +422,17 @@ def create_indexes(pitch_contour_segmentations, index_types, num_permutations):
 
 def _search_index(
     query_pitch_contour_segmentations,
-    matrix_of_indexes,
-    inverted_index_data,
+    inverted_index,
     songs_list,
     index_type,
     removed_candidates,
     num_permutations
 ):
-    print('Tokenizing... (step 2/5)')
     query_td_matrix, _query_audio_mapping, _query_positions_mapping = tokenize(
         query_pitch_contour_segmentations, index_type
     )
-    print('Searching in inverted index... (step 3/5)')
     candidates_count = search_inverted_index(
-        query_td_matrix, matrix_of_indexes, inverted_index_data, num_permutations
+        query_td_matrix, inverted_index, num_permutations
     )
     candidates_indexes = (np.nonzero(candidates_count)[0] - 1)
     candidates = songs_list[candidates_indexes]
@@ -476,6 +444,7 @@ def _search_index(
             for candidate in candidates
             if candidate[0] not in removed_candidates
         ])
+
     return candidates
 
 
@@ -490,7 +459,6 @@ def search_indexes(
     num_permutations,
     results_mapping=None
 ):
-    print('Retrieving data... (step 1/5)')
     # Recovering songs pitch vectors
     song_pitch_vectors = unzip_pitch_contours(
         song_pitch_contour_segmentations
@@ -514,11 +482,8 @@ def search_indexes(
             #         # 'original_positions_mapping'
             #     ]
             # )
-            matrix_of_index_name = f'matrix_of_{index_type}'
-            inverted_index_name = f'inverted_{index_type}_data'
-
-            matrix_of_indexes = load_sparse_matrix(matrix_of_index_name)
-            inverted_index_data = load_structure(inverted_index_name)
+            inverted_index_name = f'inverted_{index_type}'
+            inverted_index = load_structure(inverted_index_name)
         except Exception as e:
             log_no_dumped_files_error(e)
             exit(1)
@@ -526,8 +491,7 @@ def search_indexes(
         # Searching songs
         candidates = _search_index(
             query_pitch_contour_segmentations,
-            matrix_of_indexes=matrix_of_indexes,
-            inverted_index_data=inverted_index_data,
+            inverted_index=inverted_index,
             songs_list=song_pitch_vectors,
             index_type=index_type,
             removed_candidates=removed_candidates,

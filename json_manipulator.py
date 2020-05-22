@@ -3,7 +3,6 @@ from json import JSONEncoder, dump, load
 from math import ceil
 import multiprocessing
 import numpy as np
-from scipy.sparse import isspmatrix
 from constants import (
     BATCH_SIZE,
     FILES_PATH
