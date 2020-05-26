@@ -228,7 +228,7 @@ def generate_inverted_index(td_matrix, permutation_count):
 
     # First position will never be occupied, in order to difference 0 from
     # a real position in matrix of indexes
-    EMPTY_ARRAY = np.array([])
+    EMPTY_ARRAY = np.array([], dtype=np.int)
     inverted_index_data = [EMPTY_ARRAY]
 
     fingerprints = np.array(range(1, num_columns + 1))
