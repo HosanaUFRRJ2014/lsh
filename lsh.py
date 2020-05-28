@@ -232,6 +232,7 @@ def generate_inverted_index(td_matrix, permutation_count):
     inverted_index_data = [EMPTY_ARRAY]
 
     fingerprints = np.array(range(1, num_columns + 1))
+    print("Fingerprints: ", fingerprints)
     for j in range(td_matrix.shape[1]):
         for i in range(permutation_count):
             dj_permutation = permutate(
@@ -314,6 +315,7 @@ def search_inverted_index(
                     is_filled_position = data_position != 0
                     if is_filled_position:
                         retrieved_pitch_vector = inverted_index_data[data_position]
+                        print(f"matrix_of_indexes[{first_index}][{second_index}] => {retrieved_pitch_vector}")
                         candidates_count[retrieved_pitch_vector] += 1
                 except IndexError as e:
                     continue
@@ -539,12 +541,12 @@ def search_indexes(
         # for candidate_name in candidates_names:
         query_name = query_pitch_contour_segmentations[0][0]
         correct_result = results_mapping.get(query_name)
-        # for position, name in enumerate(candidates_names, start=1):
-        #     print(f'\t\t{position}. ', name)
+        for position, name in enumerate(candidates_names, start=1):
+            print(f'\t\t{position}. ', name)
         print('Query: ', query_name)
         is_in_list = correct_result in candidates_names
-        print('Result: ', correct_result)
-        print(f'({index_type}) Correct result in retrieved list? ', is_in_list)
+        # print('Result: ', correct_result)
+        # print(f'({index_type}) Correct result in retrieved list? ', is_in_list)
         if is_in_list:
             print('\tPosition: ', candidates_names.index(correct_result)+1)
         # print('Exiting program...')

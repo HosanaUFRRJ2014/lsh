@@ -90,7 +90,7 @@ def print_results(matching_algorithm, index_type, results, show_top_x):
     for query_name, result in results.items():
         print('Query: ', query_name)
         print('Results:')
-        bounded_result = result[:show_top_x]
+        bounded_result =  result# result[:show_top_x]
         for position, r in enumerate(bounded_result, start=1):
             print('\t{:03}. {}'.format(position, r))
     print('*' * 80)
