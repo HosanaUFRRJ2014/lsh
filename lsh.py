@@ -264,6 +264,7 @@ def search_inverted_index(
     num_columns = query_td_matrix.shape[0]  # + 1
 
     fingerprints = np.array(range(1, num_columns + 1))
+    print("Fingerprints: ", fingerprints)
     for j in range(query_td_matrix.shape[1]):
         for i in range(permutation_count):
             dj_permutation = permutate(
@@ -289,6 +290,7 @@ def search_inverted_index(
                     try:
                         retrieved_pitch_vector = inverted_index[first_index][second_index]
                         if not isinstance(retrieved_pitch_vector, int):
+                            print(f"inverted_index[{first_index}][{second_index}] = {retrieved_pitch_vector}")
                             candidates_count[retrieved_pitch_vector] += 1
                         # print("retrieved pitch vector for fingerprint %d : "%(second_index), retrieved_pitch_vector)
                     except IndexError as e:
