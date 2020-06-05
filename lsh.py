@@ -222,11 +222,13 @@ def generate_inverted_index(td_matrix, permutation_count):
         dtype=int
     )
 
-    fingerprints = np.array(range(1, num_columns + 1))
+    # fingerprints = np.array(range(1, num_columns + 1))
     for j in range(td_matrix.shape[1]):
+        fingerprints = np.array(range(1, len(np.nonzero(td_matrix[:, j])[0])+1))
         for i in range(permutation_count):
+            my_array = td_matrix[:, j]
             dj_permutation = permutate(
-                to_permute=td_matrix[:, j],
+                to_permute= my_array[np.nonzero(td_matrix[:, j])[0]], # td_matrix[:, j],
                 shuffle_seed=i,
                 fingerprints=fingerprints
             )
@@ -289,11 +291,16 @@ def search_inverted_index(
 
                     try:
                         retrieved_pitch_vector = inverted_index[first_index][second_index]
-                        if not isinstance(retrieved_pitch_vector, int):
-                            print(f"inverted_index[{first_index}][{second_index}] = {retrieved_pitch_vector}")
+                        print(f"inverted_index[{first_index}][{second_index}] = {retrieved_pitch_vector}")
+                        if isinstance(retrieved_pitch_vector, np.ndarray) or not retrieved_pitch_vector == 0:
                             candidates_count[retrieved_pitch_vector] += 1
                         # print("retrieved pitch vector for fingerprint %d : "%(second_index), retrieved_pitch_vector)
                     except IndexError as e:
+                        print(' '.join([
+                            f'INFO: Tryed to access',
+                            'inverted_index[{first_index}][{second_index}]',
+                            'but IndexError has ocurred. Ignoring exception.'
+                        ]))
                         continue
     return candidates_count
 
@@ -505,14 +512,14 @@ def search_indexes(
         # for candidate_name in candidates_names:
         query_name = query_pitch_contour_segmentations[0][0]
         correct_result = results_mapping.get(query_name)
-        # for position, name in enumerate(candidates_names, start=1):
-        #     print(f'\t\t{position}. ', name)
+        for position, name in enumerate(candidates_names, start=1):
+            print(f'\t\t{position}. ', name)
         print('Query: ', query_name)
-        is_in_list = correct_result in candidates_names
-        print('Result: ', correct_result)
-        print(f'({index_type}) Correct result in retrieved list? ', is_in_list)
-        if is_in_list:
-            print('\tPosition: ', candidates_names.index(correct_result)+1)
+        # is_in_list = correct_result in candidates_names
+        # print('Result: ', correct_result)
+        # print(f'({index_type}) Correct result in retrieved list? ', is_in_list)
+        # if is_in_list:
+        #    print('\tPosition: ', candidates_names.index(correct_result)+1)
         # print('Exiting program...')
         exit(0)
         # print('Applying matching algorithm... (step 4/5)')
