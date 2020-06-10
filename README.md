@@ -4,6 +4,46 @@
 
 Este repositório consiste na implementação de um Locality Sensitive Hashing por permutação,baseado no artigo [Minmax Circular Sector Arc for External Plagiarism’s Heuristic Retrieval stage](https://www.sciencedirect.com/science/article/abs/pii/S0950705117303696) porém aplicado à recuperação musical, baseado em [A query by humming system based on locality sensitive hashing indexes](https://www.researchgate.net/publication/256994076_A_query_by_humming_system_based_on_locality_sensitive_hashing_indexes).
 
+
+## Árvore do diretório esperada:
+```
+.
+├── constants.py
+├── diagrama-TCC-v1.jpg
+├── essentia_examples.py
+├── essentia_features.txt
+├── expected results
+├── generated_files (Precisa ser baixado de outro lugar. Ver o README dessa pasta para mais detalhes)
+│   ├── confidence_threshold.txt
+│   ├── inverted_nlsh_index_data.json
+│   ├── inverted_nlsh_index.json
+│   ├── inverted_plsh_index_data.json
+│   ├── inverted_plsh_index.json
+│   ├── matrix_of_nlsh_index.npz
+│   ├── matrix_of_plsh_index.npz
+│   ├── queries_pitch_contour_segmentations_1.json
+│   ├── queries_pitch_contour_segmentations_2.json
+│   ├── queries_pitch_contour_segmentations_3.json
+│   ├── queries_pitch_contour_segmentations_4.json
+│   ├── queries_pitch_contour_segmentations_5.json
+│   ├── queries_pitch_contour_segmentations_6.json
+│   ├── queries_pitch_contour_segmentations_filenames.json
+│   ├── songs_pitch_contour_segmentations_1.json
+│   └── songs_pitch_contour_segmentations_filenames.json
+├── json_manipulator.py
+├── loader.py
+├── lsh.py
+├── main.py
+├── matching_algorithms.py
+├── messages.py
+├── README.md
+├── requirements.txt
+├── resumo-artigo-tcc
+├── test_searches.py
+└── utils.py
+
+```
+
 ## Etapas
 1. Extração de vetores de pitches das músicas
 2. Criação de índices
