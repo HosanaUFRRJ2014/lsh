@@ -1,4 +1,4 @@
-Substituir o conteúdo dessa pasta por -> https://mega.nz/file/JMkTnCAR
+Substituir o conteúdo dessa pasta por -> https://mega.nz/file/JMkTnCAR#V8yTNKLPy9M6WndbzF-UGVgm2ajaGqCG1E9hIqPHWnE
 
 Árvore de dados esperada (dentro do diretório LSH):
 
