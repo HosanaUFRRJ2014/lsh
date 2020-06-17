@@ -80,6 +80,8 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 ## Exemplos de uso:
 
 ### Extrai e serializa vetores de pitches das músicas:
+(Pular esse comando se houverem arquivos *pitch_contour_segmentations* em [generated_files](./generated_files))
+
     python main.py serialize_pitches
 
 ### Cria índice PLSH:
