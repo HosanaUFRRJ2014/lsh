@@ -1,5 +1,6 @@
 # -*-coding:utf8;-*-
 from copy import copy
+from json import JSONEncoder
 from math import floor, ceil
 import numpy as np
 
@@ -130,13 +131,14 @@ def _dump_piece(piece):
     return ''.join(str(p) for p in piece)
 
 
-def _vocab_index(piece, vocabulary):
+def _vocab_index(piece, vocabulary, vocabulary_read_only):
     # TODO: Does it need to take all the pitch vector to be the key?
     dumped_piece = _dump_piece(piece)
     if dumped_piece not in vocabulary.keys():
-        vocabulary[dumped_piece] = len(vocabulary) + 1
+        if not vocabulary_read_only:
+            vocabulary[dumped_piece] = len(vocabulary) + 1
 
-    return vocabulary[dumped_piece], dumped_piece
+    return vocabulary.get(dumped_piece), dumped_piece
 
 
 def _audio_mapping_index(dumped_piece, audio_map, filename):
@@ -158,8 +160,10 @@ def _original_position_index(dumped_piece, orig_pos_map, original_pos, filename)
     return orig_pos_map
 
 
-def tokenize(pitch_contour_segmentations, index_type):
-    vocabulary = {}
+def tokenize(pitch_contour_segmentations, index_type, vocabulary={}):
+    vocabulary_read_only = True
+    if not vocabulary:
+        vocabulary_read_only = False
     audio_map = {}
     orig_pos_map = {}
     td_matrix_temp = []
@@ -178,7 +182,7 @@ def tokenize(pitch_contour_segmentations, index_type):
         )
 
         for audio_chunk_index, piecej in enumerate(audio_chunks):
-            index, dumped_piece = _vocab_index(piecej, vocabulary)
+            index, dumped_piece = _vocab_index(piecej, vocabulary, vocabulary_read_only)
             di_pieces.append(index)
             # audio_map = _audio_mapping_index(dumped_piece, audio_map, filename)
             # orig_pos_map = _original_position_index(
@@ -192,11 +196,14 @@ def tokenize(pitch_contour_segmentations, index_type):
     td_matrix = np.zeros([len(vocabulary), number_of_audios])
 
     for i in range(number_of_audios):
-        td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
+        try:
+            td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
+        except TypeError:
+            print("TypeError in td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1. Ignoring")
 
     del td_matrix_temp
     td_matrix_temp = None
-    return td_matrix, audio_map, orig_pos_map
+    return td_matrix, vocabulary, audio_map, orig_pos_map
 
 
 def get_fingerprint(vocabulary):
@@ -221,9 +228,10 @@ def generate_inverted_index(td_matrix, permutation_count):
         dtype=np.ndarray
     )
 
-    # Forma antiga de gerar os fingerprints comentado
+    # Forma antiga de gerar os fingerprints
     # fingerprints = np.array(range(1, num_columns + 1))
     for j in range(td_matrix.shape[1]):
+        # Forma nova de gerar os fingerprints
         fingerprints = np.array(range(1, len(np.nonzero(td_matrix[:, j])[0])+1))
         for i in range(permutation_count):
             my_array = td_matrix[:, j]
@@ -233,18 +241,19 @@ def generate_inverted_index(td_matrix, permutation_count):
                 shuffle_seed=i,
                 fingerprints=fingerprints
             )
+            non_zero_indexes = np.nonzero(dj_permutation)
             for l in range(SELECTION_FUNCTION_COUNT):
                 first_index = _get_index(
                     permutation_number=i,
                     selecion_function_code=l
                 )
-                non_zero_indexes = np.nonzero(dj_permutation)
 
                 # TODO: Verify if I can ignore empties.
                 if non_zero_indexes[0].size > 0:
                     second_index = int(
                         SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
                     ) - 1
+                   
                     # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
                     if isinstance(inverted_index[first_index][second_index], np.ndarray):
                         inverted_index[first_index][second_index] = np.append(
@@ -275,12 +284,12 @@ def search_inverted_index(
                 shuffle_seed=i,
                 fingerprints=fingerprints
             )
+            non_zero_indexes = np.nonzero(dj_permutation)
             for l in range(SELECTION_FUNCTION_COUNT):
                 first_index = _get_index(
                     permutation_number=i,
                     selecion_function_code=l
                 )
-                non_zero_indexes = np.nonzero(dj_permutation)
 
                 # TODO: Verify if I can ignore empties.
                 # Shouldn't I remove zero pitches at the reading moment, like ref [16]
@@ -404,7 +413,7 @@ def clip_false_candidates(all_confidence_measurements_data):
 def _create_index(pitch_contour_segmentations, index_type, num_permutations):
     # Indexing
     print('Tokenizing...')
-    td_matrix, audio_mapping, original_positions_mapping = tokenize(
+    td_matrix, vocabulary, audio_mapping, original_positions_mapping = tokenize(
         pitch_contour_segmentations, index_type
     )
     print('Generating inverted index...')
@@ -424,6 +433,9 @@ def _create_index(pitch_contour_segmentations, index_type, num_permutations):
             structure_name=index_name
         )
 
+    print(f'Saving vocabulary in file')
+    dump_structure(vocabulary, structure_name="vocabulary", cls=JSONEncoder)
+
 
 def create_indexes(pitch_contour_segmentations, index_types, num_permutations):
     for index_type in index_types:
@@ -433,13 +445,14 @@ def create_indexes(pitch_contour_segmentations, index_types, num_permutations):
 def _search_index(
     query_pitch_contour_segmentations,
     inverted_index,
+    vocabulary,
     songs_list,
     index_type,
     removed_candidates,
     num_permutations
 ):
-    query_td_matrix, _query_audio_mapping, _query_positions_mapping = tokenize(
-        query_pitch_contour_segmentations, index_type
+    query_td_matrix, _vocabulary, _query_audio_mapping, _query_positions_mapping = tokenize(
+        query_pitch_contour_segmentations, index_type, vocabulary=vocabulary
     )
     candidates_count = search_inverted_index(
         query_td_matrix, inverted_index, num_permutations
@@ -494,6 +507,7 @@ def search_indexes(
             # )
             inverted_index_name = f'inverted_{index_type}'
             inverted_index = load_structure(inverted_index_name)
+            vocabulary = load_structure('vocabulary', as_numpy=False)
         except Exception as e:
             log_no_dumped_files_error(e)
             exit(1)
@@ -502,6 +516,7 @@ def search_indexes(
         candidates = _search_index(
             query_pitch_contour_segmentations,
             inverted_index=inverted_index,
+            vocabulary=vocabulary,
             songs_list=song_pitch_vectors,
             index_type=index_type,
             removed_candidates=removed_candidates,
