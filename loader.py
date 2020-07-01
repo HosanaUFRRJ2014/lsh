@@ -88,14 +88,17 @@ def _load_audio_pitch_contour_segmentation(audio_path):
 def _load_all_audio_pitch_contour_segmentations(filenames_file, path, start, end=None):
     pitch_contour_segmentations = []
     audios_paths = _read_dataset_names(filenames_file, path)
+
+    NOT_WORKING_AUDIOS = [
+        # Audios which can't be loaded. The reason is unknown.
+        '../uniformiza_dataset/queries/004043.wav',
+        '../uniformiza_dataset/queries/004048.wav',
+        '../uniformiza_dataset/queries/004050.wav',
+        '../uniformiza_dataset/queries/004051.wav'
+    ]
     for audio_path in audios_paths[start:end]:
         print('path: ', audio_path)
-        if audio_path in [
-            '../uniformiza_dataset/queries/004043.wav',
-            '../uniformiza_dataset/queries/004048.wav',
-            '../uniformiza_dataset/queries/004050.wav',
-            '../uniformiza_dataset/queries/004051.wav'
-        ]:
+        if audio_path in NOT_WORKING_AUDIOS:
             print(f'{audio_path}  skipped')
             continue
         pitch_contour_segmentations.append(
@@ -131,12 +134,14 @@ def load_song_pitch_contour_segmentation(audio_path):
 
 
 def load_all_songs_pitch_contour_segmentations(start=0, end=None):
-    return _load_all_audio_pitch_contour_segmentations(
+    audio_pitch_contour_segmentations = _load_all_audio_pitch_contour_segmentations(
         filenames_file=FILENAMES_OF_SONGS,
         path=WAV_SONGS_PATH,
         start=start,
         end=end
     )
+
+    return audio_pitch_contour_segmentations
 
 
 def load_all_queries_pitch_contour_segmentations(start=0, end=None):
