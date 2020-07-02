@@ -218,8 +218,7 @@ def generate_inverted_index(td_matrix, permutation_count):
     num_columns = td_matrix.shape[0]  # + 1
     inverted_index = np.zeros(
         (num_lines, num_columns),
-        # dtype=np.ndarray
-        dtype=int
+        dtype=np.ndarray
     )
 
     # fingerprints = np.array(range(1, num_columns + 1))

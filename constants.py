@@ -4,7 +4,7 @@ SHOW_TOP_X = 20
 
 
 SELECTION_FUNCTIONS = [
-    min,
+    # min,
     max
 ]
 SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
