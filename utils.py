@@ -1,5 +1,11 @@
 # -*-coding:utf8;-*-
 import numpy as np
+from scipy.sparse import (
+    load_npz,
+    isspmatrix_dok,
+    save_npz
+)
+
 from constants import (
     FILES_PATH,
     INDEX_TYPES,
