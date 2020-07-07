@@ -35,21 +35,19 @@ def calculate_pitches_counts(pitch_values):
     pitches_counts = {}
 
     for pitch, count in zip(unique_elements, counts):
-        pitch_count = count/len(pitch_values)
-        pitches_counts[pitch] = pitch_count
+        tf = count/len(pitch_values)
+        pitches_counts[pitch] = tf
 
     return pitches_counts
 
 
 def calculate_inversed_pitches_values_occurrencies(num_audios, array_of_pitch_values):
     """Inspired in Inverse-Document-Frequency (IDF).
-
+    Number of the songs in the dataset divided by the number of the docs in
+    which a certain pitch appears.
     See more at:
     https://mungingdata.wordpress.com/2017/11/25/episode-1-using-tf-idf-to-identify-the-signal-from-the-noise/
 
-    Args:
-        num_audios (int): total amount of audios
-        pitches_values (array of arrays): array of arrays of pitches values of each song
     """
     inversed_occurrencies = {}
     num_audios_with_pitch = {}
@@ -93,17 +91,26 @@ def calculate_tfidfs(num_audios, all_pitch_contour_segmentations, min_tfidf=0):
 
     tfs_of_all_audios = []
     for pitch_values in array_of_pitch_values:
+        unique_pitch_values, counts = np.unique(pitch_values, return_counts=True)
         audio_tfs = calculate_pitches_counts(pitch_values)
-        tfs_of_all_audios.append(audio_tfs)
+        tfs_of_all_audios.append((audio_tfs, unique_pitch_values, counts))
 
     tfidfs_per_audios = {}  # maps tf-idfs of all picthes in an audio for each audio
-    for filename, audio_tfs in zip(filenames, tfs_of_all_audios):
+    for filename, tuple_of_infos in zip(filenames, tfs_of_all_audios):
+        audio_tfs, unique_pitch_values, counts = tuple_of_infos
+        pitch_count_mapping = dict(zip(unique_pitch_values, counts))
         tfidf_audio = []
         for pitch, pitch_tf in audio_tfs.items():
-            tfidf = pitch_tf * idfs[pitch]
+            idf = idfs[pitch]
+            tfidf = pitch_tf * idf
 
             if tfidf > min_tfidf:
-                tfidf_audio.append(tfidf)
+                tfidf_audio.append(
+                    (
+                        tfidf,
+                        (pitch, pitch_count_mapping[pitch])
+                    )
+                )
         tfidfs_per_audios[filename] = tfidf_audio
 
     return tfidfs_per_audios
