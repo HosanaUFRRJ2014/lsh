@@ -14,7 +14,7 @@ from loader import (
     load_all_queries_pitch_contour_segmentations
 )
 from messages import log_no_serialized_pitch_contour_segmentations_error
-from utils import calculate_tfidfs
+
 
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
@@ -68,7 +68,9 @@ def _serialize(args):
         )
     )
 
-    return batch_filename, batch_of_pitch_contour_segmentations
+    del pitch_contour_segmentations
+
+    return batch_filename
 
 
 def serialize_pitch_contour_segmentations():
@@ -110,29 +112,16 @@ def serialize_pitch_contour_segmentations():
                 for task in tasks
             ]
 
-            batches_filenames = []
-            pitches_countour_segmentations = []
-            for result in results:
-                batch_filename, batch_pitch_countour_segmentations = result.get()
-                batches_filenames.append(batch_filename)
-                pitch_countour_segmentations.extend(
-                    batch_pitch_countour_segmentations
-                )
+            serialized_files = [
+                result.get()
+                for result in results
+            ]
 
-        # TODO: Calculate tf-idfs here?
-        # pitch_countour_segmentations 
-        # Está calculando sobre o dataset e depois, separadamente, para as
-        # queries. É válido?
-        tfidfs = calculate_tfidfs(
-            nun_audios=len(pitches_countour_segmentations),
-            array_of_pitch_values=pitches_countour_segmentations,
-            min_tfidf=0.1
-        )
         # Saves serialized filenames in a file,
         # in order to process them in deserialization fase
         file_of_filenames = f'{structure_name}_filenames'
         dump_structure(
-            structure=batches_filenames,
+            structure=serialized_files,
             structure_name=file_of_filenames
         )
 
@@ -158,7 +147,7 @@ def _deserialize_pitch_contour_segmentations(file_of_filenames, num_audios=None)
     return pitch_contour_segmentations
 
 
-def deserialize_songs_pitch_contour_segmentations(num_audios=None, min_tfidf=0.02):
+def deserialize_songs_pitch_contour_segmentations(num_audios=None):
     file_of_filenames = 'songs_pitch_contour_segmentations_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
         file_of_filenames=file_of_filenames,
