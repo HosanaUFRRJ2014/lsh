@@ -161,9 +161,8 @@ def _original_position_index(dumped_piece, orig_pos_map, original_pos, filename)
 
 
 def tokenize(pitch_contour_segmentations, index_type, vocabulary={}):
-    vocabulary_read_only = True
-    if not vocabulary:
-        vocabulary_read_only = False
+    vocabulary_read_only = True if vocabulary else False
+
     audio_map = {}
     orig_pos_map = {}
     td_matrix_temp = []
@@ -263,7 +262,7 @@ def generate_inverted_index(td_matrix, permutation_count):
                     else:
                         inverted_index[first_index][second_index] = np.array([j + 1])
                 # print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
-
+                print(f"inverted_index[{first_index}][{second_index}]", inverted_index[first_index][second_index])
     return inverted_index
 
 
@@ -308,7 +307,7 @@ def search_inverted_index(
                     except IndexError as e:
                         print(' '.join([
                             f'INFO: Tryed to access',
-                            'inverted_index[{first_index}][{second_index}]',
+                            f'inverted_index[{first_index}][{second_index}]',
                             'but IndexError has ocurred. Ignoring exception.'
                         ]))
                         continue
