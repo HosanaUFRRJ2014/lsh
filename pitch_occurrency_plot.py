@@ -140,11 +140,9 @@ def main():
 
             percent = (remaining_length/original_length) * 100
             percentages.append(percent)
-            # print("Original set:", set(original_pitch_vector))
 
             print("Original size:", original_length)
 
-            # print("Remaining portion:", [p for p, c in pitches_count])
             print("Remaining size:", remaining_length)
             
             print("Percent:", percent, " %", "\n")
