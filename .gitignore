@@ -5,7 +5,13 @@
 
 __pycache__/
 
-generated_files/
+generated_files/queries*
+generated_files/songs*
+generated_files/matrix*
+generated_files/inverted*
+generated_files/vocabulary.json
+
+
 
 diagrama-TCC-v1\.jpg
 
