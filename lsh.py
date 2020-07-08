@@ -228,15 +228,15 @@ def generate_inverted_index(td_matrix, permutation_count):
     )
 
     # Forma antiga de gerar os fingerprints
-    # fingerprints = np.array(range(1, num_columns + 1))
+    fingerprints = np.array(range(1, num_columns + 1))
     for j in range(td_matrix.shape[1]):
         # Forma nova de gerar os fingerprints
-        fingerprints = np.array(range(1, len(np.nonzero(td_matrix[:, j])[0])+1))
+        # fingerprints = np.array(range(1, len(np.nonzero(td_matrix[:, j])[0])+1))
         for i in range(permutation_count):
-            my_array = td_matrix[:, j]
+            # my_array = td_matrix[:, j]
             dj_permutation = permutate(
-                # to_permute=td_matrix[:, j],
-                to_permute= my_array[np.nonzero(td_matrix[:, j])[0]],
+                to_permute=td_matrix[:, j],
+                # to_permute= my_array[np.nonzero(td_matrix[:, j])[0]],
                 shuffle_seed=i,
                 fingerprints=fingerprints
             )
