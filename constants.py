@@ -89,3 +89,11 @@ AUDIO_TYPES = [
     QUERY,
     SONG
 ]
+
+MAE = "mae"  # mean absolute error
+RMSE = "rmse"  # root mean squared error
+
+METRIC_TYPES = [
+    MAE,
+    RMSE
+]

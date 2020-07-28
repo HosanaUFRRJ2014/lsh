@@ -1,5 +1,6 @@
 import logging
 from constants import (
+    AUDIO_TYPES,
     CREATE_INDEX,
     INDEX_TYPES,
     SERIALIZE_PITCH_VECTORS,
@@ -20,6 +21,14 @@ def log_could_not_calculate_mrr_warning(query_name):
         "because correct result was not found among candidates."
     ])
     logging.warn(message)
+
+
+def log_invalid_audio_type_error(audio_type):
+    message = ' '.join([
+        f"'{audio_type}' is not a valid audio type.",
+        f"Options are {AUDIO_TYPES}."
+    ])
+    logging.error(message)
 
 
 def log_invalid_index_type_error(index_types):
