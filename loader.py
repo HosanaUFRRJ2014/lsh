@@ -128,7 +128,7 @@ def get_queries_count():
     )
 
 
-def load_song_pitch_contour_segmentation(audio_path):
+def load_audio_pitch_contour_segmentation(audio_path):
     returned_tuple = _load_audio_pitch_contour_segmentation(audio_path)
     return np.array([returned_tuple])
 

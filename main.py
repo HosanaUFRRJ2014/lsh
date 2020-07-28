@@ -32,7 +32,7 @@ from lsh import (
     calculate_mean_reciprocal_rank
 )
 from loader import (
-    load_song_pitch_contour_segmentation,
+    load_audio_pitch_contour_segmentation,
     load_expected_results
 )
 from utils import (
@@ -190,7 +190,7 @@ def main():
     elif method_name in SEARCH_METHODS:
         # Loading query and song pitch vectors
         if method_name == SEARCH:
-            query_pitch_contour_segmentations = load_song_pitch_contour_segmentation(query_filename)
+            query_pitch_contour_segmentations = load_audio_pitch_contour_segmentation(query_filename)
         elif method_name == SEARCH_ALL:
             query_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations(num_audios)
 

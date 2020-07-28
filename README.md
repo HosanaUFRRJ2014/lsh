@@ -77,7 +77,7 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 
     pip install -r requirements.txt
 
-## Exemplos de uso:
+## Exemplos do uso principal:
 
 ### Extrai e serializa vetores de pitches dos áudios:
 (Pular esse comando se houverem arquivos *pitch_contour_segmentations* em [generated_files](./generated_files))

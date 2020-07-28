@@ -1,4 +1,15 @@
 import os
+# Includes the parent directory into sys.path, to make imports work
+import os.path, sys
+sys.path.append(
+    os.path.join(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        ),
+        os.pardir
+    )
+)
+
 from constants import (
     FILENAMES_OF_QUERIES,
     PLSH_INDEX,

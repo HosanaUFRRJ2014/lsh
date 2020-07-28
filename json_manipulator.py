@@ -67,7 +67,7 @@ def _serialize(args):
         )
     )
 
-    return batch_filename, batch_of_pitch_contour_segmentations
+    return batch_filename, pitch_contour_segmentations
 
 
 def serialize_pitch_contour_segmentations():
