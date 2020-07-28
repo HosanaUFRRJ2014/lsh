@@ -108,3 +108,46 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 
 ### Mais opções:
     python main.py --help
+
+
+--------------------------
+
+## Etapas para TF-IDF
+
+**Nota:** Ative o virtual environment
+
+
+1. Cálculo de TF-IDF para cada pitch do dataset (aplica somente para as músicas):
+
+        python scripts/tfidf_calculation.py
+
+2. Extrair os pitches remanescentes das músicas e das queries acima de MIN-TFIDF (valor float)
+
+        python scripts/tfidf_pitch_extraction.py --audio_type song --min_tfidf ${MIN_TFIDF}
+
+        python scripts/tfidf_pitch_extraction.py --audio_type query --min_tfidf ${MIN_TFIDF}
+
+    **Obs:** Usar o mesmo valor de ${MIN_TFIDF} nos comandos acima.
+
+3. Cálculo das similaridades de Jaccard entre cada música e seu resultado esperado, com e sem a aplicação da etapa anterior
+
+        # Músicas e queries originais
+        python scripts/calculate_jaccard_similarities.py
+
+        # Músicas e queries que passaram pela etapa anterior
+        python scripts/calculate_jaccard_similarities.py --min_tfidf ${MIN_TFIDF}
+
+4. Cálculo do Mean Absolute Error (MAE)
+
+        METRIC_TYPE="mae"
+
+        python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF}
+
+
+5. Cálculo do Root Mean Squared Error (RMSE)
+
+        METRIC_TYPE="rmse"
+
+        python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF}
+
+    
