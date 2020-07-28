@@ -78,3 +78,14 @@ MAX_RA_DEPTH = 3
 MAX_KTRA_DEPTH = 2  # arbitrary value
 # From the main article
 INITIAL_KTRA_K_VALUE = 1
+
+
+#
+## TF-IDF
+QUERY = "query"
+SONG = "song"
+
+AUDIO_TYPES = [
+    QUERY,
+    SONG
+]
