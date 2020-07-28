@@ -22,21 +22,21 @@ class NumpyArrayEncoder(JSONEncoder):
         return JSONEncoder.default(self, obj)
 
 
-def dump_structure(structure, structure_name, cls=NumpyArrayEncoder):
+def dump_structure(structure, structure_name, cls=NumpyArrayEncoder, extension="json"):
     '''
     Dumps Numpy ndarray or Python objects. Defaults to numpy objects.
     '''
 
-    filename = f'{FILES_PATH}/{structure_name}.json'
+    filename = f'{FILES_PATH}/{structure_name}.{extension}'
     with open(filename, 'w') as json_file:
         dump(structure, json_file, cls=cls)
 
 
-def load_structure(structure_name, as_numpy=True):
+def load_structure(structure_name, as_numpy=True, extension="json"):
     '''
     Loads Numpy ndarray objects.
     '''
-    filename = f'{FILES_PATH}/{structure_name}.json'
+    filename = f'{FILES_PATH}/{structure_name}.{extension}'
     with open(filename, 'r') as json_file:
         loaded = load(json_file)
 
