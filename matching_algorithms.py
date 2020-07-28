@@ -29,8 +29,32 @@ def _mean_substract(pitch_vector):
     return pitch_vector - mean.compute(pitch_vector)
 
 
-def _calculate_jaccard_similarity(query_audio, candidate, **kwargs):
+def calculate_jaccard_similarity(query_audio, candidate):
+    """
+    Calculates Jaccard distance in a generic way.
+    Jaccard Similarity algorithm in steps:
+    1. Get the shared members between both sets, i.e. intersection.
+    2. Get the members in both sets (shared and un-shared, i.e. union).
+    3. Divide the number of shared members found in (1) by the total number of
+       members found in (2).
+    4. Multiply the found number in (3) by 100.
+    """
+    intersection = np.intersect1d(candidate, query_audio)
+    union = np.union1d(candidate, query_audio)
+
+    jaccard_similarity = 0
+    if union.size > 0:
+        jaccard_similarity = (intersection.size / union.size) * 100
+
+    return jaccard_similarity
+
+
+def __calculate_jaccard_similarity(query_audio, candidate, **kwargs):
     '''
+    WARNING: Use this algorithm ONLY for THIS LSH environment purposes. If you
+    want to calculate Jaccard distance in a generic way, please use
+    calculate_jaccard_similarity.
+    
     Jaccard Similarity algorithm in steps:
     1. Get the shared members between both sets, i.e. intersection.
     2. Get the members in both sets (shared and un-shared, i.e. union).
@@ -41,23 +65,22 @@ def _calculate_jaccard_similarity(query_audio, candidate, **kwargs):
     from lsh import (
         exec_plsh_pitch_extraction as extract_plsh_pitches,
         exec_nlsh_pitch_extraction as extract_nlsh_pitches
-    )  # circular import
+    )  # this fixes circular import error
+
     index_type = kwargs.get('index_type')
 
     exec_pitch_extraction = {
         PLSH_INDEX: extract_plsh_pitches,
         NLSH_INDEX: extract_nlsh_pitches
     }
-    # import ipdb; ipdb.set_trace()
+
     query_chunks = exec_pitch_extraction[index_type](query_audio.tolist())
     candidate_chunks = exec_pitch_extraction[index_type](candidate.tolist())
 
-    intersection = np.intersect1d(candidate_chunks, query_chunks)
-    union = np.union1d(candidate_chunks, query_chunks)
-
-    jaccard_similarity = 0
-    if union.size > 0:
-        jaccard_similarity = (intersection.size / union.size) * 100
+    jaccard_similarity = calculate_jaccard_similarity(
+        query_chunks,
+        candidate_chunks
+    )
 
     return jaccard_similarity
 
@@ -124,7 +147,7 @@ def _calculate_linear_scaling(
             distances.append((distance, rescaled_query_audio))
     if not distance:
         # Ignoring zero distance. (It's likely a noise)
-        min_distance = MAX_FLOAT, None
+        min_distance, query = MAX_FLOAT, None
     else:
         min_distance, query = min(distances, key=lambda t: t[0])
     return min_distance, query
@@ -270,7 +293,7 @@ def apply_matching_algorithm(
     choosed_algorithm, query, candidates, index_type, original_positions_mapping, use_ls
 ):
     matching_algorithms = {
-        JACCARD_SIMILARITY: _calculate_jaccard_similarity,
+        JACCARD_SIMILARITY: __calculate_jaccard_similarity,
         LINEAR_SCALING: _calculate_linear_scaling,
         BALS: _calculate_bals,
         RECURSIVE_ALIGNMENT: _recursive_align,
@@ -282,7 +305,7 @@ def apply_matching_algorithm(
         query_audio = np.array(query_audio)
         query_audio = np.trim_zeros(query_audio)
         query_distance = dict()
-        if (choosed_algorithm in [LINEAR_SCALING, BALS] or use_ls):
+        if use_ls or choosed_algorithm in [LINEAR_SCALING, BALS]:
             # Rescaling here to optmize time consumption
             rescaled_query_audios = _rescale_audio(query_audio)
         else:
