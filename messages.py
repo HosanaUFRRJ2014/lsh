@@ -1,10 +1,12 @@
 import logging
+from varname import nameof
 from constants import (
     AUDIO_TYPES,
     CREATE_INDEX,
     INDEX_TYPES,
     SERIALIZE_PITCH_VECTORS,
     MATCHING_ALGORITHMS,
+    MANHATTAN_DISTANCE,
     METHODS
 )
 
@@ -40,8 +42,12 @@ def log_invalid_index_type_error(index_types):
 
 
 def log_invalid_matching_algorithm_error(matching_algorithm):
+    if matching_algorithm == MANHATTAN_DISTANCE:
+        reason_message = f"{MANHATTAN_DISTANCE} is invalid in LSH search context. Use this only for TF-IDF."
+    else:
+        reason_message = f"Value '{matching_algorithm}' for matching algorithm is invalid."
     message = ' '.join([
-        f"Value '{matching_algorithm}' for matching algorithm is invalid.",
+        reason_message,
         f"Valid algorithms are: {MATCHING_ALGORITHMS}."
     ])
     logging.error(message)
@@ -79,6 +85,12 @@ def log_no_serialized_pitch_contour_segmentations_error(structure_name):
         "to serialize pitch vectors first."
     ])
     logging.error(message)
+
+
+def log_useless_arg_warn(arg, purpose):
+    arg_name = nameof(arg)
+    message = f"The argment '{arg_name}' is useless for {purpose}"
+    logging.warn(message)
 
 
 def log_wrong_confidence_measurement_error(value):

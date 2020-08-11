@@ -17,7 +17,9 @@ import textwrap
 
 
 import numpy as np
+import pandas as pd
 
+from constants import SONG
 from json_manipulator import (
     deserialize_songs_pitch_contour_segmentations,
     dump_structure,
@@ -198,7 +200,17 @@ def main():
     #         title=f'TF-IDF in {num_audios} songs (min-tfidf>{min_tfidf})'
     #     )
 
-    dump_structure(structure=tfidfs, structure_name=f'tf_idfs_per_file')
+    data_frame = pd.DataFrame.from_dict(tfidfs, orient='index', dtype=np.float64)
+
+    dump_structure(
+        data_frame,
+        structure_name=f'{SONG}_tf_idfs_per_file',
+        as_numpy=False,
+        as_pandas=True,
+        extension="pkl"
+    )
+
+    # dump_structure(structure=data_frame, structure_name=f'{SONG}_tf_idfs_per_file')
 
 
 if __name__ == "__main__":

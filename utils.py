@@ -12,6 +12,7 @@ from constants import (
     FILES_PATH,
     INDEX_TYPES,
     MATCHING_ALGORITHMS,
+    MANHATTAN_DISTANCE,
     METHODS,
     REQUIRE_INDEX_TYPE,
     THRESHOLD_FILENAME
@@ -173,6 +174,14 @@ def unzip_pitch_contours(pitch_contour_segmentations):
     return np.array(pitch_vectors)
 
 
+def is_invalid_matching_algorithm(matching_algorithm):
+    invalid_matching_algorithm = matching_algorithm not in MATCHING_ALGORITHMS
+    
+    if invalid_matching_algorithm:
+        log_invalid_matching_algorithm_error(matching_algorithm)
+        exit(1)
+
+
 def validate_program_args(**kwargs):
     """
     Validates the list of program args. If any of them is invalid, logs an
@@ -184,9 +193,8 @@ def validate_program_args(**kwargs):
     matching_algorithm = kwargs['matching_algorithm']
     index_types = kwargs['index_types']
     is_training_confidence = kwargs['is_training_confidence']
-
     invalid_method = method_name not in METHODS
-    invalid_matching_algorithm = matching_algorithm not in MATCHING_ALGORITHMS
+    
     invalid_index_type = len(
         set(INDEX_TYPES).union(set(index_types))
     ) != len(INDEX_TYPES)
@@ -199,9 +207,9 @@ def validate_program_args(**kwargs):
     if invalid_method:
         log_invalid_method_error(method_name)
         exit(1)
-    if invalid_matching_algorithm:
-        log_invalid_matching_algorithm_error(matching_algorithm)
-        exit(1)
+
+    is_invalid_matching_algorithm(matching_algorithm)
+
     if invalid_index_type:
         log_invalid_index_type_error(index_types)
         exit(1)

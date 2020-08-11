@@ -26,7 +26,7 @@ from json_manipulator import (
     deserialize_queries_pitch_contour_segmentations
 )
 from lsh import (
-    apply_matching_algorithm,
+    apply_matching_algorithm_to_lsh,
     create_indexes,
     search_indexes,
     calculate_mean_reciprocal_rank

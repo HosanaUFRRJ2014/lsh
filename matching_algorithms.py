@@ -5,7 +5,9 @@ from scipy.ndimage.interpolation import shift
 from constants import (
     PLSH_INDEX,
     NLSH_INDEX,
+    COSINE_SIMILARITY,
     JACCARD_SIMILARITY,
+    MANHATTAN_DISTANCE,
     LINEAR_SCALING,
     BALS,
     BALS_SHIFT_SIZE,
@@ -18,7 +20,7 @@ from constants import (
 from utils import percent
 
 
-__all__ = ["apply_matching_algorithm"]
+__all__ = ["apply_matching_algorithm_to_lsh"]
 
 MAX_FLOAT = float_info.max
 mean = Mean()
@@ -29,7 +31,22 @@ def _mean_substract(pitch_vector):
     return pitch_vector - mean.compute(pitch_vector)
 
 
-def calculate_jaccard_similarity(query_audio, candidate):
+def calculate_cosine_similarity(query_tfidfs, song_tfidfs, **kwargs):
+    """
+    Cosine Similarity (d1, d2) = Dot product(d1, d2) / ||d1|| * ||d2||
+    """
+    # é a melhor opção?
+    # cosine_similarity(np.sort(a).reshape(1, -1),np.sort(b)[:-1].reshape(1,-1))
+    dot_product = np.dot(query_tfidfs, song_tfidfs)
+
+    query_norm = np.sqrt( np.sum( np.square(query_tfidfs)))
+    candidate_norm = np.sqrt( np.sum( np.square(song_tfidfs)))
+
+    cosine = dot_product/(query_norm * candidate_norm)
+
+    return cosine
+
+def calculate_jaccard_similarity(query_audio, candidate, **kwargs):
     """
     Calculates Jaccard distance in a generic way.
     Jaccard Similarity algorithm in steps:
@@ -102,7 +119,7 @@ def _rescale_audio(query_audio):
                 chunck = query_audio[i:i + denominator]
                 if scaling_factor > 1.0:
                     # Lenghten audio
-                    # Note: only works for 1.25 (5,4) and 1.5 (3,2)
+                    # FIXME: only works for 1.25 (5,4) and 1.5 (3,2)
                     repeated = chunck[-1]
                     chunck = np.append(chunck, repeated)
                 rescaled_audio = np.append(rescaled_audio, chunck[:numerator])
@@ -222,9 +239,12 @@ def _recursive_align(query_audio, candidate, **kwargs):
 
     depth = kwargs.get('depth')
 
+    # if rescaled_query_audio == None or candidate == None:
+    #     return min_distance
     if rescaled_query_audio.size == 0 or candidate.size == 0:
-        raise Exception('size zero detected!!!')
-
+        return min_distance
+        # raise Exception('size zero detected!!!')
+    
     if depth < MAX_RA_DEPTH:
         query_size = rescaled_query_audio.size
         candidate_size = candidate.size
@@ -289,9 +309,14 @@ def _calculate_ktra(query_audio, candidate, **kwargs):
     return min_distance
 
 
-def apply_matching_algorithm(
+def apply_matching_algorithm_to_lsh(
     choosed_algorithm, query, candidates, index_type, original_positions_mapping, use_ls
 ):
+    """
+    Applies mathing algorithm in LSH search context. It means
+    this function should be used after LSH retrieval, in order to filter
+    the found candidates.
+    """
     matching_algorithms = {
         JACCARD_SIMILARITY: __calculate_jaccard_similarity,
         LINEAR_SCALING: _calculate_linear_scaling,
@@ -307,31 +332,32 @@ def apply_matching_algorithm(
         query_distance = dict()
         if use_ls or choosed_algorithm in [LINEAR_SCALING, BALS]:
             # Rescaling here to optmize time consumption
-            rescaled_query_audios = _rescale_audio(query_audio)
+            query_audios = _rescale_audio(query_audio)
         else:
             # not an array for jaccard, ra and ktra with use_ls=False
-            rescaled_query_audios = query_audio
+            query_audios = query_audio
         for candidate_tuple in candidates:
             candidate_filename, candidate = candidate_tuple
             candidate = np.array(candidate)
             candidate = np.trim_zeros(candidate)
 
             if use_ls and choosed_algorithm == KTRA:
-                _min_distance, rescaled_query_audios = _calculate_linear_scaling(
-                    rescaled_query_audios,
+                # NOTE: returns just one query audio here!
+                _min_distance, query_audios = _calculate_linear_scaling(
+                    query_audios,
                     candidate,
                     include_zero_distance=True
                 )
             ##
             distance_or_similarity = matching_algorithms[choosed_algorithm](
-                rescaled_query_audios,
+                query_audios,
                 candidate,
                 query_audio_name=query_audio_name,
                 index_type=index_type,  # For Jaccard
                 include_zero_distance=True,  # For LS and BALS
                 original_positions_mapping=original_positions_mapping,
-                depth=0,  # For recursive alignment and ktra
-                k=INITIAL_KTRA_K_VALUE  # For ktra
+                depth=0,  # For RA and KTRA
+                k=INITIAL_KTRA_K_VALUE  # For KTRA
             )
             ##
             if choosed_algorithm == LINEAR_SCALING:
@@ -351,3 +377,60 @@ def apply_matching_algorithm(
         all_queries_distances[query_audio_name] = query_distance
 
     return all_queries_distances
+
+
+def apply_matching_algorithm_to_tfidf(choosed_algorithm, **kwargs):
+    """
+    Applies mathing algorithm in TF-IDF search context.
+    """
+    matching_algorithms = {
+        JACCARD_SIMILARITY: calculate_jaccard_similarity,
+        COSINE_SIMILARITY: calculate_cosine_similarity,
+        # MANHATTAN_DISTANCE: _calculate_manhattan_distance,
+        
+        # TODO: Adapt methods for this context
+        LINEAR_SCALING: _calculate_linear_scaling,
+        BALS: _calculate_bals,
+        RECURSIVE_ALIGNMENT: _recursive_align,
+        KTRA: _calculate_ktra
+    }
+
+    # if choosed_algorithm in [LINEAR_SCALING, BALS]:
+    #     _query = _rescale_audio(query)
+    # else:
+    #     _query = query
+
+    if choosed_algorithm == JACCARD_SIMILARITY:
+        similarity = calculate_jaccard_similarity(
+            query_audio=kwargs.get('query'),
+            candidate=kwargs.get('song')
+        )
+    elif choosed_algorithm == COSINE_SIMILARITY:
+        similarity = calculate_cosine_similarity(
+            query_tfidfs=kwargs.get('query_tfidfs'),
+            song_tfidfs=kwargs.get('song_tfidfs')
+        )
+    else:
+        # distance_or_similarity = matching_algorithms[choosed_algorithm](
+        #     _query,
+        #     song,
+        #     include_zero_distance=True,  # For LS and BALS
+        #     depth=0,  # For RA and KTRA
+        #     k=INITIAL_KTRA_K_VALUE,  # For KTRA
+        # )
+        raise Exception(f'{choosed_algorithm} NOT IMPLEMENTED')
+
+    # if choosed_algorithm == LINEAR_SCALING:
+    #     # Returns distance and query. Needs only the query
+    #     distance_or_similarity = distance_or_similarity[0]
+    
+    # if choosed_algorithm != JACCARD_SIMILARITY:
+    #     # Inverts distance value, in order to know the similarity
+    #     if distance_or_similarity != 0:
+    #         similarity = 1/distance_or_similarity
+    #     else:
+    #         similarity = 100
+    # else:
+    #     similarity = distance_or_similarity
+
+    return similarity

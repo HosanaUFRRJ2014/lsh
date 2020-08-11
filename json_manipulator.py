@@ -3,6 +3,7 @@ from json import JSONEncoder, dump, load
 from math import ceil
 import multiprocessing
 import numpy as np
+import pandas as pd
 from constants import (
     BATCH_SIZE,
     FILES_PATH
@@ -15,6 +16,7 @@ from loader import (
 )
 from messages import log_no_serialized_pitch_contour_segmentations_error
 
+
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
@@ -22,26 +24,39 @@ class NumpyArrayEncoder(JSONEncoder):
         return JSONEncoder.default(self, obj)
 
 
-def dump_structure(structure, structure_name, cls=NumpyArrayEncoder, extension="json"):
+def dump_structure(
+    structure, structure_name, cls=NumpyArrayEncoder,
+    as_numpy=True, as_pandas=False, extension="json"
+):
     '''
-    Dumps Numpy ndarray or Python objects. Defaults to numpy objects.
+    Dumps Numpy ndarray , Pandas or Python objects. Defaults to numpy objects.
     '''
 
     filename = f'{FILES_PATH}/{structure_name}.{extension}'
-    with open(filename, 'w') as json_file:
-        dump(structure, json_file, cls=cls)
 
+    if as_numpy:
+        with open(filename, 'w') as json_file:
+            dump(structure, json_file, cls=cls)
 
-def load_structure(structure_name, as_numpy=True, extension="json"):
+    elif as_pandas:
+        pd.to_pickle(structure, structure_name)
+
+def load_structure(
+    structure_name, as_numpy=True, as_pandas=False, extension="json"
+):
     '''
-    Loads Numpy ndarray objects.
+    Loads Numpy ndarray, Pandas or simple read objects.
     '''
     filename = f'{FILES_PATH}/{structure_name}.{extension}'
-    with open(filename, 'r') as json_file:
-        loaded = load(json_file)
 
-        if as_numpy:
-            loaded = np.asarray(loaded)
+    if not as_pandas:
+        with open(filename, 'r') as json_file:
+            loaded = load(json_file)
+
+            if as_numpy:
+                loaded = np.asarray(loaded)
+    else:
+        loaded = pd.read_pickle(filename)
 
     return loaded
 

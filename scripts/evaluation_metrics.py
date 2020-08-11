@@ -13,6 +13,8 @@ from math import sqrt
 import numpy as np
 
 from constants import (
+    JACCARD_SIMILARITY,
+    MATCHING_ALGORITHMS,
     METRIC_TYPES,
     MAE,
     RMSE
@@ -22,44 +24,60 @@ from json_manipulator import (
     load_structure
 )
 
+from utils import is_invalid_matching_algorithm
+
 
 def process_args():
     parser = ArgumentParser()
 
     parser.add_argument(
         "--metric_type",
-        "-metric",
+        "-me",
         type=str,
         help=f"Metric to be applied. Options: {METRIC_TYPES}"
+    )
+
+    parser.add_argument(
+        "--matching_algorithm",
+        "-ma",
+        type=str,
+        help="Options: {}. Defaults to {}".format(
+            ', '.join(MATCHING_ALGORITHMS),
+            JACCARD_SIMILARITY
+        ),
+        default=JACCARD_SIMILARITY
     )
 
     parser.add_argument(
         "--min_tfidf",
         "-min",
         type=float,
-        help=f"Gets the previous calculated jaccard similarities for this minimum TF-IDF."
+        help=f"Gets the previous calculated  similarities for this minimum TF-IDF."
     )
 
     args = parser.parse_args()
 
     min_tfidf = args.min_tfidf
     metric_type = args.metric_type
-    return min_tfidf, metric_type
+    matching_algorithm = args.matching_algorithm
+    
+    is_invalid_matching_algorithm(matching_algorithm)
+    
+    return min_tfidf, metric_type, matching_algorithm
 
 
-def mean_absolute_error(jaccard_similarities, tfidf_jaccard_similarities, square=False):
+def mean_absolute_error(similarities, tfidf_similarities, square=False):
     """
     Mean Absolute Error (MAE).
-    Calculates MAE between jaccard similarities and jaccard similarities
-    after aplication of TF-IDF.
+    Calculates MAE between similarities and similarities after aplication of TF-IDF.
     """
-    if not isinstance(jaccard_similarities, np.ndarray):
-        jaccard_similarities = np.array(jaccard_similarities)
+    if not isinstance(similarities, np.ndarray):
+        similarities = np.array(similarities)
     
-    if not isinstance(tfidf_jaccard_similarities, np.ndarray):
-        tfidf_jaccard_similarities = np.array(tfidf_jaccard_similarities)
+    if not isinstance(tfidf_similarities, np.ndarray):
+        tfidf_similarities = np.array(tfidf_similarities)
 
-    absolute_error = np.absolute(jaccard_similarities - tfidf_jaccard_similarities)
+    absolute_error = np.absolute(similarities - tfidf_similarities)
     if square:
         absolute_error = np.square(absolute_error)
     mae = np.mean(absolute_error)
@@ -67,13 +85,13 @@ def mean_absolute_error(jaccard_similarities, tfidf_jaccard_similarities, square
     return mae
 
 
-def root_mean_squared_error(jaccard_similarities, tfidf_jaccard_similarities):
+def root_mean_squared_error(similarities, tfidf_similarities):
     """
     Root Mean Squared Error (RMSE).
     """
     mean_square_error = mean_absolute_error(
-        jaccard_similarities,
-        tfidf_jaccard_similarities,
+        similarities,
+        tfidf_similarities,
         square=True
     )
     root = sqrt(mean_square_error)
@@ -90,26 +108,28 @@ def apply_metric(metric_type, original_similarities, tfidf_similarities):
 
 
 def main():
-    min_tfidf, metric_type = process_args()
+    min_tfidf, metric_type, matching_algorithm = process_args()
 
-    jaccard_similarities = load_structure(
-        structure_name="jaccard_similarities",
+    path = "similarities"
+    similarities = load_structure(
+        structure_name=f"{path}/{matching_algorithm}",
         as_numpy=False
     )
-    tfidf_jaccard_similarities = load_structure(
-        structure_name=f"jaccard_similarities_min_tfidf_{min_tfidf}",
+    tfidf_similarities = load_structure(
+        structure_name=f"{path}/{matching_algorithm}_min_tfidf_{min_tfidf}",
         as_numpy=False
     )
 
     result = apply_metric(
         metric_type,
-        np.array(list(jaccard_similarities.values())),
-        np.array(list(tfidf_jaccard_similarities.values()))
+        list(similarities.values()),
+        list(tfidf_similarities.values())
     )
 
+    evaluation_path = "evaluations"
     dump_structure(
         structure=result,
-        structure_name=f"{metric_type}_min_tfidf_{min_tfidf}",
+        structure_name=f"{evaluation_path}/{matching_algorithm}_{metric_type}_min_tfidf_{min_tfidf}",
         extension="txt"
     )
 

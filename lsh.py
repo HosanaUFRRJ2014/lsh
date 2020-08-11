@@ -16,7 +16,7 @@ from json_manipulator import (
     NumpyArrayEncoder
 )
 from loader import load_expected_results
-from matching_algorithms import apply_matching_algorithm
+from matching_algorithms import apply_matching_algorithm_to_lsh
 from messages import (
     log_could_not_calculate_mrr_warning,
     log_no_dumped_files_error
@@ -316,7 +316,7 @@ def search_inverted_index(
 
 def calculate_mean_reciprocal_rank(all_queries_distances, results_mapping, show_top_x):
     '''
-    Rank results found by apply_matching_algorithm and applies Mean Reciproval
+    Rank results found by apply_matching_algorithm_to_lsh and applies Mean Reciproval
     Rank (MRR).
     '''
     reciprocal_ranks = []
@@ -538,7 +538,7 @@ def search_indexes(
         # print('Exiting program...')
         exit(0)
         # print('Applying matching algorithm... (step 4/5)')
-        results = apply_matching_algorithm(
+        results = apply_matching_algorithm_to_lsh(
             choosed_algorithm=matching_algorithm,
             query=query_pitch_vectors,
             candidates=candidates,

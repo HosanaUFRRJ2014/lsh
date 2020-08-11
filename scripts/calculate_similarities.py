@@ -19,11 +19,22 @@ from json_manipulator import (
     load_structure
 )
 
-from matching_algorithms import calculate_jaccard_similarity
+from matching_algorithms import apply_matching_algorithm_to_tfidf
 from loader import load_expected_results
 from loader import get_songs_count
-from constants import SONG, QUERY
-
+from constants import (
+    SONG,
+    QUERY,
+    SEARCH_METHODS,
+    MATCHING_ALGORITHMS,
+    JACCARD_SIMILARITY,
+    COSINE_SIMILARITY
+)
+from utils import is_invalid_matching_algorithm
+from messages import (
+    log_invalid_matching_algorithm_error,
+    log_useless_arg_warn
+)
 
 def process_args():
     parser = ArgumentParser()
@@ -44,18 +55,39 @@ def process_args():
     # )
 
     parser.add_argument(
+        "--matching_algorithm",
+        "-ma",
+        type=str,
+        help="Options: {}. Defaults to {}".format(
+            ', '.join(MATCHING_ALGORITHMS),
+            JACCARD_SIMILARITY
+        ),
+        default=JACCARD_SIMILARITY
+    )
+
+    parser.add_argument(
         "--min_tfidf",
         "-min",
         type=float,
-        help=f"Calculates jaccard similarity for this minimum TF-IDF. If not informed, considers all pitches."
+        help=f"Calculates similarity for this minimum TF-IDF. If not informed, considers all pitches."
     )
 
     args = parser.parse_args()
 
     # num_audios = args.num_audios
     min_tfidf = args.min_tfidf
+    matching_algorithm = args.matching_algorithm
+    is_invalid_matching_algorithm(matching_algorithm)
+
+    is_cosine_sim = matching_algorithm == COSINE_SIMILARITY
+    if min_tfidf and is_cosine_sim:
+        log_useless_arg_warn(
+            arg=min_tfidf,
+            purpose="cosine similarity calculation"
+        )
+
     # return num_audios, min_tfidf
-    return min_tfidf
+    return min_tfidf, matching_algorithm
 
 
 def load_remainings(min_tfidf):
@@ -89,31 +121,54 @@ def load_originals():
 
 
 def main():
-    jaccard_similarities = {}
-    # num_audios, min_tfidf = process_args
-    min_tfidf = process_args()
+    similarities = {}
+
+    min_tfidf, matching_algorithm = process_args()
     results_mapping = load_expected_results()
+    songs_tfidfs = load_structure(
+        structure_name=f'{SONG}_tf_idfs_per_file',
+        as_numpy=False
+    )
+
+    queries_tfidfs = load_structure(
+        structure_name=f'{QUERY}_tf_idfs_per_file',
+        as_numpy=False
+    )
 
     if min_tfidf:
         songs, queries = load_remainings(min_tfidf)
-        structure_name = f"jaccard_similarities_min_tfidf_{min_tfidf}"
+        structure_name = f"{matching_algorithm}_min_tfidf_{min_tfidf}"
     else:
         songs, queries = load_originals()
-        structure_name = f"jaccard_similarities"
+        structure_name = f"{matching_algorithm}"
 
     for query_filename, query_pitches_values in queries.items():
-        expected_song_name = results_mapping[query_filename]
-        expected_song = songs[expected_song_name]
+        expected_song_filename = results_mapping[query_filename]
+        expected_song = songs[expected_song_filename]
+        song_tfidfs = np.array(
+            list(songs_tfidfs[expected_song_filename].values())
+        )
+        query_tfidfs = np.array(
+            list(queries_tfidfs[query_filename].values())
+        )
+        kwargs = {
+            "query": np.array(query_pitches_values),
+            "song": np.array(expected_song),
 
-        # Apply jaccard
-        jaccard_similarities[query_filename] = calculate_jaccard_similarity(
-            query_audio=query_pitches_values,
-            candidate=expected_song
+            # used only for cosine similarity
+            "song_tfidfs": song_tfidfs, 
+            "query_tfidfs": query_tfidfs
+        }
+
+        similarities[query_filename] = apply_matching_algorithm_to_tfidf(
+            choosed_algorithm=matching_algorithm,
+            **kwargs
         )
 
+    path = "similarities"
     dump_structure(
-        structure_name=structure_name,
-        structure=jaccard_similarities
+        structure_name=f"{path}/{structure_name}",
+        structure=similarities
     )
 
 if __name__ == "__main__":
