@@ -290,11 +290,12 @@ def main():
             structure_name=f'{QUERY}_tf_idfs_per_file'
         )
 
+
 if __name__ == "__main__":
     main()
 
 
-# Pós exercícios 10/08: 
-- Modificar leitura do pitchextraction para considerar dataframe como modelo de 
-armazenamento de dados 
-- Criar passo para "calculo" de tfidf de queries, para substituir ou antes de tfidf extraction
+# Pós exercícios 10/08:
+# - Modificar leitura do pitch_extraction para considerar dataframe como modelo de
+# armazenamento de dados
+# - Criar passo para "calculo" de tfidf de queries, para substituir ou antes de tfidf extraction

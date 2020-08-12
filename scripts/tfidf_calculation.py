@@ -1,5 +1,14 @@
 # Includes the parent directory into sys.path, to make imports work
-import os.path, sys
+import os.path
+import sys
+import textwrap
+import numpy as np
+import pandas as pd
+from argparse import (
+    ArgumentParser,
+    RawDescriptionHelpFormatter
+)
+from math import floor, log2
 sys.path.append(
     os.path.join(
         os.path.dirname(
@@ -8,16 +17,6 @@ sys.path.append(
         os.pardir
     )
 )
-from argparse import (
-    ArgumentParser,
-    RawDescriptionHelpFormatter
-)
-from math import floor, log2
-import textwrap
-
-
-import numpy as np
-import pandas as pd
 
 from constants import SONG
 from json_manipulator import (
@@ -93,7 +92,9 @@ def calculate_pitches_counts(pitch_values):
     return pitches_counts
 
 
-def calculate_inversed_pitches_values_occurrencies(num_audios, array_of_pitch_values):
+def calculate_inversed_pitches_values_occurrencies(
+    num_audios, array_of_pitch_values
+):
     """Inspired in Inverse-Document-Frequency (IDF).
     Number of the songs in the dataset divided by the number of the docs in
     which a certain pitch appears.
@@ -111,7 +112,6 @@ def calculate_inversed_pitches_values_occurrencies(num_audios, array_of_pitch_va
             else:
                 num_audios_with_pitch[pitch] = 1
 
-            
     for pitch, num_appearences in num_audios_with_pitch.items():
         inversed_occurrency = log2(
             num_audios/num_audios_with_pitch[pitch]
@@ -122,7 +122,7 @@ def calculate_inversed_pitches_values_occurrencies(num_audios, array_of_pitch_va
 
 
 def calculate_tfidfs(num_audios, all_pitch_contour_segmentations):
-    """Inspired in Term-Frequency, Inverse-Document-Frequency (TFIDF). 
+    """Inspired in Term-Frequency, Inverse-Document-Frequency (TFIDF).
 
     See more at:
     https://mungingdata.wordpress.com/2017/11/25/episode-1-using-tf-idf-to-identify-the-signal-from-the-noise/
@@ -209,7 +209,7 @@ def main():
         as_pandas=True,
         extension="pkl"
     )
-
+    # decisao = 'usar dataframe invertido ou nao?'  
     # dump_structure(structure=data_frame, structure_name=f'{SONG}_tf_idfs_per_file')
 
 
