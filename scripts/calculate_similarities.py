@@ -11,6 +11,7 @@ sys.path.append(
 
 from argparse import ArgumentParser
 import numpy as np
+import pandas as pd
 
 from json_manipulator import (
     deserialize_songs_pitch_contour_segmentations,
@@ -75,32 +76,12 @@ def process_args():
     args = parser.parse_args()
 
     # num_audios = args.num_audios
-    min_tfidf = args.min_tfidf
+    min_tfidf = args.min_tfidf if args.min_tfidf else 0.0
     matching_algorithm = args.matching_algorithm
     is_invalid_matching_algorithm(matching_algorithm)
 
-    is_cosine_sim = matching_algorithm == COSINE_SIMILARITY
-    if min_tfidf and is_cosine_sim:
-        log_useless_arg_warn(
-            arg=min_tfidf,
-            purpose="cosine similarity calculation"
-        )
-
     # return num_audios, min_tfidf
     return min_tfidf, matching_algorithm
-
-
-def load_remainings(min_tfidf):
-    # TODO: Add custom try/except error message here
-    songs_remainings_pitches = load_structure(
-        structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{SONG}',
-        as_numpy=False
-    )
-    queries_remaining_pitches = load_structure(
-        structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{QUERY}',
-        as_numpy=False
-    )
-    return songs_remainings_pitches, queries_remaining_pitches
 
 
 def load_originals():     
@@ -120,6 +101,19 @@ def load_originals():
     return songs_original_pitches, queries_original_pitches
 
 
+def load_remainings(min_tfidf):
+    # TODO: Add custom try/except error message here
+    songs_remainings_pitches = load_structure(
+        structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{SONG}',
+        as_numpy=False
+    )
+    queries_remaining_pitches = load_structure(
+        structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{QUERY}',
+        as_numpy=False
+    )
+    return songs_remainings_pitches, queries_remaining_pitches
+
+
 def main():
     similarities = {}
 
@@ -127,12 +121,16 @@ def main():
     results_mapping = load_expected_results()
     songs_tfidfs = load_structure(
         structure_name=f'{SONG}_tf_idfs_per_file',
-        as_numpy=False
+        as_numpy=False,
+        as_pandas=True,
+        extension="pkl"
     )
 
     queries_tfidfs = load_structure(
         structure_name=f'{QUERY}_tf_idfs_per_file',
-        as_numpy=False
+        as_numpy=False,
+        as_pandas=True,
+        extension="pkl"
     )
 
     if min_tfidf:
@@ -142,23 +140,39 @@ def main():
         songs, queries = load_originals()
         structure_name = f"{matching_algorithm}"
 
+
     for query_filename, query_pitches_values in queries.items():
         expected_song_filename = results_mapping[query_filename]
         expected_song = songs[expected_song_filename]
-        song_tfidfs = np.array(
-            list(songs_tfidfs[expected_song_filename].values())
-        )
-        query_tfidfs = np.array(
-            list(queries_tfidfs[query_filename].values())
-        )
-        kwargs = {
-            "query": np.array(query_pitches_values),
-            "song": np.array(expected_song),
 
-            # used only for cosine similarity
-            "song_tfidfs": song_tfidfs, 
-            "query_tfidfs": query_tfidfs
-        }
+        if matching_algorithm == COSINE_SIMILARITY:
+            # ensures song and query vectors will have the same size
+            merged_dataframe = pd.DataFrame.from_records(
+                [
+                    songs_tfidfs.loc[expected_song_filename],
+                    queries_tfidfs.loc[query_filename]
+                ],
+                index=[expected_song_filename, query_filename]
+            ) 
+
+            # replaces nan by zero
+            merged_dataframe = merged_dataframe.fillna(0)
+
+            # Filter out tfidfs less than min-tfidf
+            merged_dataframe = merged_dataframe.where(
+                merged_dataframe > min_tfidf,
+                other=0
+            )
+
+            kwargs = {
+                "song_tfidfs": merged_dataframe.loc[expected_song_filename], 
+                "query_tfidfs": merged_dataframe.loc[query_filename]
+            }
+        else:
+            kwargs = {
+                "query": np.array(query_pitches_values),
+                "song": np.array(expected_song),
+            }
 
         similarities[query_filename] = apply_matching_algorithm_to_tfidf(
             choosed_algorithm=matching_algorithm,
@@ -173,3 +187,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# - [REVIEW] Criar passo para "cálculo" de tfidf de queries, para substituir ou antes de tfidf extraction 
+# - [REVIEW] Modificar obtain remaining pitches de query_tfidf_calculation, para poder pegar
+# os dados do dataframe
+# -  TODO: Filtrar música e candidatos para excluir os min-tfidf menor que um dado threshold
+# em calculate_similarities
+# 

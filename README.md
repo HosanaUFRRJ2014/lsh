@@ -117,9 +117,11 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 **Nota:** Ative o virtual environment
 
 
-1. Cálculo de TF-IDF para cada pitch do dataset (aplica somente para as músicas):
+1. Cálculo de TF-IDF para cada pitch do dataset:
 
-        python scripts/tfidf_calculation.py
+        python scripts/song_tfidf_calculation.py
+
+        python scripts/query_tfidf_calculation.py
 
 2. Extrair os pitches remanescentes das músicas e das queries acima de MIN-TFIDF (valor float)
 

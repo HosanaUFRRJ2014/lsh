@@ -35,16 +35,19 @@ def calculate_cosine_similarity(query_tfidfs, song_tfidfs, **kwargs):
     """
     Cosine Similarity (d1, d2) = Dot product(d1, d2) / ||d1|| * ||d2||
     """
-    # é a melhor opção?
-    # cosine_similarity(np.sort(a).reshape(1, -1),np.sort(b)[:-1].reshape(1,-1))
-    dot_product = np.dot(query_tfidfs, song_tfidfs)
+    dot_product = sum(p*q for p,q in zip(query_tfidfs, song_tfidfs))
 
     query_norm = np.sqrt( np.sum( np.square(query_tfidfs)))
     candidate_norm = np.sqrt( np.sum( np.square(song_tfidfs)))
 
-    cosine = dot_product/(query_norm * candidate_norm)
+    norms = query_norm * candidate_norm
+
+    cosine = 0.0
+    if norms != 0:
+        cosine = dot_product/norms
 
     return cosine
+
 
 def calculate_jaccard_similarity(query_audio, candidate, **kwargs):
     """

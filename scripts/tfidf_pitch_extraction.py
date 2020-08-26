@@ -30,13 +30,17 @@ from constants import (
 from json_manipulator import (
     deserialize_queries_pitch_contour_segmentations,
     deserialize_songs_pitch_contour_segmentations,
+    deserialize_audios_pitch_contour_segmentations,
     dump_structure,
     get_songs_count,
     get_queries_count,
     load_structure
 )
 from loader import load_expected_results
-from messages import log_invalid_audio_type_error
+from messages import ( 
+    log_invalid_audio_type_error,
+    log_forgotten_step_warn
+)
 from utils import save_graphic
 
 
@@ -116,56 +120,33 @@ def process_args():
     return num_audios, min_tfidf, audio_type, will_save_graphic
 
 
-def obtain_song_remaining_pitches(**kwargs):
+def obtain_remaining_pitches(**kwargs):
     tfidfs = kwargs.get("tfidfs")
     filename = kwargs.get("filename")
     original_vector = kwargs.get("original_vector")
     min_tfidf = kwargs.get("min_tfidf")
 
     # Rebuild the original portion of data of filtered pitches by tfidf
-    pitches_and_tfidfs = tfidfs[filename]
+    pitches_and_tfidfs = tfidfs.loc[filename]
     remaining_pitches = []
     for pitch in original_vector:
-        if pitches_and_tfidfs[str(pitch)] >= min_tfidf:
+        tfidf = pitches_and_tfidfs.get(pitch)
+        if tfidf and tfidf > min_tfidf:
             remaining_pitches.append(pitch)
 
     return remaining_pitches
 
 
-def obtain_query_remaining_pitches_and_tfidfs(**kwargs):
-    query_filename = kwargs.get("filename")
-    results_mapping = kwargs.get("results_mapping")
-    song_filename = results_mapping.get(query_filename)
-    song_tfidfs = kwargs.get("tfidfs").get(song_filename)
-    original_vector = kwargs.get("original_vector")
-    vocabulary_remaining_pitches = kwargs.get("vocabulary_remaining_pitches")
-
-    # Gets corresponding query TF-IDFs and remaining pitches
-    remaining_pitches = []
-    query_tfidfs = {}
-
-    for pitch in original_vector:
-        if pitch in vocabulary_remaining_pitches:
-            remaining_pitches.append(pitch)
-            pitch_tfidf = song_tfidfs.get(str(pitch))
-            if pitch_tfidf:
-                query_tfidfs[pitch] = pitch_tfidf
-
-    return remaining_pitches, query_tfidfs
-
-
-def extract_remaining_pitches(tfidfs, all_pitch_contour_segmentations, num_audios, min_tfidf, audio_type, vocabulary_remaining_pitches):
+def extract_remaining_pitches(
+    tfidfs, all_pitch_contour_segmentations, num_audios, min_tfidf
+):
     percentages = {}
-    queries_tfidfs = {}
     no_remaining_pitches_count = 0
     all_remaining_pitches = {}
 
-    results_mapping = load_expected_results()
     kwargs = {
         "tfidfs": tfidfs,
-        "min_tfidf": min_tfidf,
-        "vocabulary_remaining_pitches": vocabulary_remaining_pitches,
-        "results_mapping": results_mapping
+        "min_tfidf": min_tfidf
     }
     for filename, original_pitch_vector, _onsets, _durations in all_pitch_contour_segmentations:
         # Removes zeros values
@@ -177,14 +158,8 @@ def extract_remaining_pitches(tfidfs, all_pitch_contour_segmentations, num_audio
         
         kwargs["filename"] = filename
         kwargs["original_vector"] = original_pitch_vector
-
-        if audio_type == SONG:
-            remaining_pitches = obtain_song_remaining_pitches(**kwargs)
-        elif audio_type == QUERY:
-            remaining_pitches, query_tfidfs = obtain_query_remaining_pitches_and_tfidfs(
-                **kwargs
-            )
-            queries_tfidfs[filename] = query_tfidfs
+        
+        remaining_pitches = obtain_remaining_pitches(**kwargs)
 
         # ignore audios without remainings
         if len(remaining_pitches) == 0:
@@ -206,43 +181,33 @@ def extract_remaining_pitches(tfidfs, all_pitch_contour_segmentations, num_audio
 
     no_pitches_percent = (no_remaining_pitches_count/num_audios) * 100
 
-    return all_remaining_pitches, percentages, no_pitches_percent, queries_tfidfs
+    return all_remaining_pitches, percentages, no_pitches_percent
 
 
 def main():
     percentages = {}
-    results_mapping = {}
-    vocabulary_remaining_pitches = np.array([])
     num_audios, min_tfidf, audio_type, will_save_graphic = process_args()
-    tfidfs = load_structure(
-        structure_name=f'{SONG}_tf_idfs_per_file',
-        as_numpy=False
-    )
 
-    if audio_type == SONG:
-        all_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_audios)
-    elif audio_type == QUERY:
-        all_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations(num_audios)
-
-        # Calculated when this command is ran for songs
-        # TODO: Add try/except message
-        vocabulary_remaining_pitches = load_structure(
-            structure_name=f'{SONG}_remaining_pitches_min_tfidf_{min_tfidf}'
+    try:
+        all_pitch_contour_segmentations = deserialize_audios_pitch_contour_segmentations(audio_type, num_audios)
+        tfidfs = load_structure(
+            structure_name=f'{audio_type}_tf_idfs_per_file',
+            as_numpy=False,
+            as_pandas=True,
+            extension="pkl"
         )
-
-    else:
-        log_invalid_audio_type_error(audio_type)
+    except KeyError:
+        # raised by deserialize audios function
         exit(1)
-    
+    except FileNotFoundError as error:
+        log_forgotten_step_warn(error, audio_type)
+        exit(1)
 
-    # queries_tfidfs exists only if audio_type = QUERY
-    all_remaining_pitches, percentages, no_pitches_percent, queries_tfidfs = extract_remaining_pitches(
+    all_remaining_pitches, percentages, no_pitches_percent = extract_remaining_pitches(
         tfidfs,
         all_pitch_contour_segmentations,
         num_audios,
-        min_tfidf=min_tfidf,
-        audio_type=audio_type,
-        vocabulary_remaining_pitches=vocabulary_remaining_pitches  # empty if audio type is song
+        min_tfidf=min_tfidf
     )
     print(
         " ".join([
@@ -269,33 +234,6 @@ def main():
         structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{audio_type}'
     )
 
-    if audio_type == SONG:            
-        # Set of remaining pitches
-        list_remainings = []
-        for sublist in all_remaining_pitches.values():
-            list_remainings.extend(sublist)
-
-        dump_structure(
-            structure=np.unique(list_remainings),
-            structure_name=f'{SONG}_remaining_pitches_min_tfidf_{min_tfidf}'
-        )
-        # dump_structure(
-        #     structure=percentages,
-        #     structure_name=f'{audio_type}_remaining_pitches_percentages_min_tfidf_{min_tfidf}'
-        # )
-
-    if audio_type == QUERY:
-        dump_structure(
-            structure=queries_tfidfs,
-            structure_name=f'{QUERY}_tf_idfs_per_file'
-        )
-
 
 if __name__ == "__main__":
     main()
-
-
-# Pós exercícios 10/08:
-# - Modificar leitura do pitch_extraction para considerar dataframe como modelo de
-# armazenamento de dados
-# - Criar passo para "calculo" de tfidf de queries, para substituir ou antes de tfidf extraction

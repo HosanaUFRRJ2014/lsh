@@ -112,7 +112,7 @@ def calculate_inversed_pitches_values_occurrencies(
             else:
                 num_audios_with_pitch[pitch] = 1
 
-    for pitch, num_appearences in num_audios_with_pitch.items():
+    for pitch, _num_appearences in num_audios_with_pitch.items():
         inversed_occurrency = log2(
             num_audios/num_audios_with_pitch[pitch]
         )
@@ -163,7 +163,7 @@ def calculate_tfidfs(num_audios, all_pitch_contour_segmentations):
 def extract_plotable_tfidfs(tfidfs, all_pitch_contour_segmentations, min_tfidf=0):
     values = []
 
-    for filename, original_pitch_vector, _, _ in all_pitch_contour_segmentations:
+    for filename, _original_pitch_vector, _, _ in all_pitch_contour_segmentations:
         remaining_pitches_and_tfidfs = tfidfs[filename]
 
         # ignore audios without remainings
@@ -209,7 +209,7 @@ def main():
         as_pandas=True,
         extension="pkl"
     )
-    # decisao = 'usar dataframe invertido ou nao?'  
+
     # dump_structure(structure=data_frame, structure_name=f'{SONG}_tf_idfs_per_file')
 
 

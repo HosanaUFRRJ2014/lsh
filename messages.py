@@ -25,6 +25,14 @@ def log_could_not_calculate_mrr_warning(query_name):
     logging.warn(message)
 
 
+def log_forgotten_step_warn(error, audio_type):
+    message = " ".join([
+        f"{error}.\n Hint: \nYou may have forgotten to perform {audio_type}"
+        "tfidf calculation step before."
+    ])
+    logging.warn(message)
+
+
 def log_invalid_audio_type_error(audio_type):
     message = ' '.join([
         f"'{audio_type}' is not a valid audio type.",
@@ -89,7 +97,7 @@ def log_no_serialized_pitch_contour_segmentations_error(structure_name):
 
 def log_useless_arg_warn(arg, purpose):
     arg_name = nameof(arg)
-    message = f"The argment '{arg_name}' is useless for {purpose}"
+    message = f"The argument '{arg_name}' is useless for {purpose}"
     logging.warn(message)
 
 
@@ -100,3 +108,4 @@ def log_wrong_confidence_measurement_error(value):
         'Expected type <float> .'
     ])
     logging.error(message)
+

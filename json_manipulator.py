@@ -1,4 +1,5 @@
 # -*-coding:utf8;-*-
+import os
 from json import JSONEncoder, dump, load
 from math import ceil
 import multiprocessing
@@ -6,7 +7,9 @@ import numpy as np
 import pandas as pd
 from constants import (
     BATCH_SIZE,
-    FILES_PATH
+    FILES_PATH,
+    QUERY,
+    SONG
 )
 from loader import (
     get_songs_count,
@@ -14,8 +17,10 @@ from loader import (
     load_all_songs_pitch_contour_segmentations,
     load_all_queries_pitch_contour_segmentations
 )
-from messages import log_no_serialized_pitch_contour_segmentations_error
-
+from messages import (
+    log_invalid_audio_type_error,
+    log_no_serialized_pitch_contour_segmentations_error
+)
 
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
@@ -34,12 +39,19 @@ def dump_structure(
 
     filename = f'{FILES_PATH}/{structure_name}.{extension}'
 
+    filepath = "/".join(
+        filename.split("/")[:-1]
+    )
+
+    if not os.path.exists(filepath):
+        os.mkdir(filepath)
+
     if as_numpy:
         with open(filename, 'w') as json_file:
             dump(structure, json_file, cls=cls)
-
     elif as_pandas:
-        pd.to_pickle(structure, structure_name)
+        pd.to_pickle(structure, filename)
+
 
 def load_structure(
     structure_name, as_numpy=True, as_pandas=False, extension="json"
@@ -180,3 +192,20 @@ def deserialize_queries_pitch_contour_segmentations(num_audios=None):
     )
 
     return pitch_contour_segmentations
+
+
+def deserialize_audios_pitch_contour_segmentations(audio_type, num_audios=None):
+    deserialize = {
+        SONG: deserialize_songs_pitch_contour_segmentations,
+        QUERY: deserialize_queries_pitch_contour_segmentations
+    }
+
+    deserialized_data = {}
+    try:
+        deserialized_data = deserialize[audio_type](num_audios)
+    except KeyError:
+        log_invalid_audio_type_error(audio_type)
+        exit(1)
+    
+    return deserialized_data
+    
