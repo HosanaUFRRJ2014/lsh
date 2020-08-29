@@ -43,7 +43,7 @@ def dump_structure(
         filename.split("/")[:-1]
     )
 
-    if not os.path.exists(filepath):
+    if not os.path.exists(filepath) and filepath != FILES_PATH:
         os.mkdir(filepath)
 
     if as_numpy:
@@ -119,7 +119,6 @@ def serialize_pitch_contour_segmentations():
 
         chunk_size = BATCH_SIZE
         batches_count = ceil(audios_count / chunk_size)
-        num_processes = multiprocessing.cpu_count()
         tasks = []
         start = 0
         end = chunk_size
@@ -130,6 +129,7 @@ def serialize_pitch_contour_segmentations():
             start = end
             end += chunk_size
 
+        num_processes = multiprocessing.cpu_count()
         with multiprocessing.Pool(num_processes) as pool:
             results = [
                 pool.apply_async(_serialize, (task, ))

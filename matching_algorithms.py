@@ -240,14 +240,15 @@ def _recursive_align(query_audio, candidate, **kwargs):
         include_zero_distance=False
     )
 
-    depth = kwargs.get('depth')
+    depth = kwargs.get('depth', 0)
 
-    # if rescaled_query_audio == None or candidate == None:
-    #     return min_distance
-    if rescaled_query_audio.size == 0 or candidate.size == 0:
-        return min_distance
+    try:
+        if rescaled_query_audio.size == 0 or candidate.size == 0:
+            return min_distance
         # raise Exception('size zero detected!!!')
-    
+    except AttributeError:
+        return min_distance
+
     if depth < MAX_RA_DEPTH:
         query_size = rescaled_query_audio.size
         candidate_size = candidate.size
@@ -282,13 +283,13 @@ def _recursive_align(query_audio, candidate, **kwargs):
 
 
 def _calculate_ktra(query_audio, candidate, **kwargs):
-    depth = kwargs.get('depth')
+    depth = kwargs.get('depth', 0)
 
     if depth == 0:
         query_audio = _mean_substract(query_audio)
         candidate = _mean_substract(candidate)
 
-    k = kwargs.get('k')
+    k = kwargs.get('k', INITIAL_KTRA_K_VALUE)
 
     d_minus = _recursive_align(query_audio - k, candidate, depth=0)
     d_zero = _recursive_align(query_audio, candidate, depth=0)
@@ -413,6 +414,14 @@ def apply_matching_algorithm_to_tfidf(choosed_algorithm, **kwargs):
             query_tfidfs=kwargs.get('query_tfidfs'),
             song_tfidfs=kwargs.get('song_tfidfs')
         )
+    elif choosed_algorithm == KTRA:
+        distance = _calculate_ktra(
+            query_audio=kwargs.get('query'),
+            candidate=kwargs.get('song')
+        )
+
+        # FIXME: Necessita converter a distância para similaridade corretamente
+        similarity = distance
     else:
         # distance_or_similarity = matching_algorithms[choosed_algorithm](
         #     _query,
@@ -426,14 +435,27 @@ def apply_matching_algorithm_to_tfidf(choosed_algorithm, **kwargs):
     # if choosed_algorithm == LINEAR_SCALING:
     #     # Returns distance and query. Needs only the query
     #     distance_or_similarity = distance_or_similarity[0]
-    
-    # if choosed_algorithm != JACCARD_SIMILARITY:
-    #     # Inverts distance value, in order to know the similarity
-    #     if distance_or_similarity != 0:
-    #         similarity = 1/distance_or_similarity
-    #     else:
-    #         similarity = 100
-    # else:
-    #     similarity = distance_or_similarity
 
     return similarity
+
+
+def normalize_distance_to_similarity(queries_expected_songs_and_distances):
+    """
+    Tries to "normalize" distance to similarity range [0-100].
+    As far as it is, as different it is. As near as it is, as similar it is too.
+    So, bigger distances must result in the smaller similarities, and the 
+    other way around. 
+    In an ideal world, zero distance would mean that the two are identical.
+    However, we can't perform this, once it would result in a ZeroDivision
+    exception. So, a very smaller value is chosen is place of zero to help us
+    estimate the similarity.
+    At the end, its also needed to invert the result, because we are dealing
+    with inversely proportional quantities.
+    """
+
+    similarities = {}
+    almost_zero_value = 0.0001
+    for query_name, expected_song_name, distance in queries_expected_songs_and_distances:
+        similarities[query_name] = 1/ (distance / almost_zero_value)
+
+    return similarities

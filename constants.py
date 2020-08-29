@@ -15,8 +15,9 @@ SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
 FILES_PATH = 'generated_files'
 
 PATH_TO_DATASET = '../uniformiza_dataset'
-FILENAMES_OF_SONGS = f'{PATH_TO_DATASET}/wav_songs.list'
-WAV_SONGS_PATH = 'songs_wav'
+FILENAMES_OF_SONGS = f'{PATH_TO_DATASET}/midi_songs.list'
+WAVE_SONGS_PATH = 'songs_wav'
+MIDI_SONGS_PATH = 'songs'
 
 FILENAMES_OF_QUERIES = f'{PATH_TO_DATASET}/queries.list'
 QUERIES_PATH = 'queries'
@@ -24,6 +25,15 @@ QUERIES_PATH = 'queries'
 EXPECTED_RESULTS = f'{PATH_TO_DATASET}/expected_results.list'
 
 THRESHOLD_FILENAME = f'{FILES_PATH}/confidence_threshold.txt'
+
+# supported file types extensions
+MIDI = 'mid'
+WAVE = 'wav'
+
+FILE_TYPE_EXTENSIONS = [
+    MIDI,
+    WAVE
+]
 
 # Max number of serialized files per file
 BATCH_SIZE = 1000
@@ -63,6 +73,12 @@ LINEAR_SCALING = 'ls'
 BALS = 'bals'
 RECURSIVE_ALIGNMENT = 'ra'
 KTRA = 'ktra'
+
+SIMILARITY_MATHING_ALGORITHMS = [
+    COSINE_SIMILARITY,
+    JACCARD_SIMILARITY
+]
+
 MATCHING_ALGORITHMS = [
     COSINE_SIMILARITY,
     JACCARD_SIMILARITY,

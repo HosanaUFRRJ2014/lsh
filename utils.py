@@ -15,6 +15,7 @@ from constants import (
     MANHATTAN_DISTANCE,
     METHODS,
     REQUIRE_INDEX_TYPE,
+    SEARCH_METHODS,
     THRESHOLD_FILENAME
 )
 from messages import (
@@ -200,7 +201,7 @@ def validate_program_args(**kwargs):
     ) != len(INDEX_TYPES)
 
     invalid_confidence_measurement = False
-    if not is_training_confidence:
+    if not is_training_confidence and method_name in SEARCH_METHODS:
         confidence_measurement = get_confidence_measurement()
         invalid_confidence_measurement = confidence_measurement is None
 

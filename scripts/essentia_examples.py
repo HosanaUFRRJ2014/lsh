@@ -1,14 +1,4 @@
 # Includes the parent directory into sys.path, to make imports work
-import os.path, sys
-sys.path.append(
-    os.path.join(
-        os.path.dirname(
-            os.path.realpath(__file__)
-        ),
-        os.pardir
-    )
-)
-
 from essentia.standard import (
     MusicExtractor,
     EqloudLoader,
@@ -20,8 +10,7 @@ from math import floor
 
 # Essentia usage examples
 
-filepath = '/home/hosana/TCC/uniformiza_dataset/songs_wav/000003.wav'
-# filepath = '/home/hosana/TCC/uniformiza_dataset/queries/000016.wav'
+filepath = '/home/hosana/TCC/uniformiza_dataset/queries/000016.wav'
 
 #
 # # Music feature extraction
@@ -56,6 +45,11 @@ print(f'Pitch values: {pitch_values}')
 # scale, i. e, the common musical scale used at present) of each note
 contour_segmentator = PitchContourSegmentation()
 onsets, durations, midipitches = contour_segmentator(pitch_values, audio)
+
+print('onsets:', onsets)
+print('durations:', durations)
+print('midipitches:', midipitches)
+
 
 # Gets pitch_values fingerprint
 Fingerprinter = Chromaprinter(maxLength=5)

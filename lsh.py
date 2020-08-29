@@ -253,7 +253,9 @@ def generate_inverted_index(td_matrix, permutation_count):
                         SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
                     ) - 1
                    
+
                     # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
+                    print(f"inverted_index[{first_index}][{second_index}] = ",inverted_index[first_index][second_index])
                     if isinstance(inverted_index[first_index][second_index], np.ndarray):
                         inverted_index[first_index][second_index] = np.append(
                             inverted_index[first_index][second_index],

@@ -3,6 +3,7 @@ from varname import nameof
 from constants import (
     AUDIO_TYPES,
     CREATE_INDEX,
+    FILE_TYPE_EXTENSIONS,
     INDEX_TYPES,
     SERIALIZE_PITCH_VECTORS,
     MATCHING_ALGORITHMS,
@@ -91,6 +92,14 @@ def log_no_serialized_pitch_contour_segmentations_error(structure_name):
         f"ERROR: Couldn't load {structure_name}.",
         f"Use method '{SERIALIZE_PITCH_VECTORS}',",
         "to serialize pitch vectors first."
+    ])
+    logging.error(message)
+
+
+def log_unsupported_file_extension_error(audio_path, extension):
+    message = " ".join([
+        f" '{audio_path}' has an unsupported file extension '{extension}'.", 
+        f"Valid extensions are {FILE_TYPE_EXTENSIONS}"
     ])
     logging.error(message)
 

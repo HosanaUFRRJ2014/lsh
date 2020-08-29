@@ -20,7 +20,10 @@ from json_manipulator import (
     load_structure
 )
 
-from matching_algorithms import apply_matching_algorithm_to_tfidf
+from matching_algorithms import (
+    apply_matching_algorithm_to_tfidf,
+    normalize_distance_to_similarity
+)
 from loader import load_expected_results
 from loader import get_songs_count
 from constants import (
@@ -29,7 +32,8 @@ from constants import (
     SEARCH_METHODS,
     MATCHING_ALGORITHMS,
     JACCARD_SIMILARITY,
-    COSINE_SIMILARITY
+    COSINE_SIMILARITY,
+    SIMILARITY_MATHING_ALGORITHMS
 )
 from utils import is_invalid_matching_algorithm
 from messages import (
@@ -115,7 +119,7 @@ def load_remainings(min_tfidf):
 
 
 def main():
-    similarities = {}
+    similarities_or_distances = {}
 
     min_tfidf, matching_algorithm = process_args()
     results_mapping = load_expected_results()
@@ -141,6 +145,7 @@ def main():
         structure_name = f"{matching_algorithm}"
 
 
+    queries_expected_songs_and_results = []
     for query_filename, query_pitches_values in queries.items():
         expected_song_filename = results_mapping[query_filename]
         expected_song = songs[expected_song_filename]
@@ -174,10 +179,27 @@ def main():
                 "song": np.array(expected_song),
             }
 
-        similarities[query_filename] = apply_matching_algorithm_to_tfidf(
+ 
+        similarities_or_distances[query_filename] = apply_matching_algorithm_to_tfidf(
             choosed_algorithm=matching_algorithm,
             **kwargs
         )
+        queries_expected_songs_and_results.append(
+            (
+                query_filename,
+                expected_song_filename,
+                similarities_or_distances[query_filename]
+            )
+        )
+    
+
+    similarities = (
+        similarities_or_distances 
+        if matching_algorithm in SIMILARITY_MATHING_ALGORITHMS
+        else normalize_distance_to_similarity(
+            queries_expected_songs_and_results
+        )
+    )
 
     path = "similarities"
     dump_structure(
@@ -187,11 +209,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# - [REVIEW] Criar passo para "cálculo" de tfidf de queries, para substituir ou antes de tfidf extraction 
-# - [REVIEW] Modificar obtain remaining pitches de query_tfidf_calculation, para poder pegar
-# os dados do dataframe
-# -  TODO: Filtrar música e candidatos para excluir os min-tfidf menor que um dado threshold
-# em calculate_similarities
-# 
