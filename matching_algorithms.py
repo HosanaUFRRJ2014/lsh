@@ -399,44 +399,35 @@ def apply_matching_algorithm_to_tfidf(choosed_algorithm, **kwargs):
         KTRA: _calculate_ktra
     }
 
+    if choosed_algorithm in [LINEAR_SCALING, BALS]:
+        raise(f'{LINEAR_SCALING} and {BALS} are not implemented for tfidf.')
+
     # if choosed_algorithm in [LINEAR_SCALING, BALS]:
     #     _query = _rescale_audio(query)
     # else:
     #     _query = query
 
     if choosed_algorithm == JACCARD_SIMILARITY:
-        similarity = calculate_jaccard_similarity(
+        result = calculate_jaccard_similarity(
             query_audio=kwargs.get('query'),
             candidate=kwargs.get('song')
         )
-    elif choosed_algorithm == COSINE_SIMILARITY:
-        similarity = calculate_cosine_similarity(
+    if choosed_algorithm == COSINE_SIMILARITY:
+        result = calculate_cosine_similarity(
             query_tfidfs=kwargs.get('query_tfidfs'),
             song_tfidfs=kwargs.get('song_tfidfs')
         )
-    elif choosed_algorithm == KTRA:
-        distance = _calculate_ktra(
+    else:
+        result = matching_algorithms[choosed_algorithm](
             query_audio=kwargs.get('query'),
             candidate=kwargs.get('song')
         )
-
-        # FIXME: Necessita converter a distância para similaridade corretamente
-        similarity = distance
-    else:
-        # distance_or_similarity = matching_algorithms[choosed_algorithm](
-        #     _query,
-        #     song,
-        #     include_zero_distance=True,  # For LS and BALS
-        #     depth=0,  # For RA and KTRA
-        #     k=INITIAL_KTRA_K_VALUE,  # For KTRA
-        # )
-        raise Exception(f'{choosed_algorithm} NOT IMPLEMENTED')
 
     # if choosed_algorithm == LINEAR_SCALING:
     #     # Returns distance and query. Needs only the query
     #     distance_or_similarity = distance_or_similarity[0]
 
-    return similarity
+    return result
 
 
 def normalize_distance_to_similarity(queries_expected_songs_and_distances):
@@ -456,6 +447,6 @@ def normalize_distance_to_similarity(queries_expected_songs_and_distances):
     similarities = {}
     almost_zero_value = 0.0001
     for query_name, expected_song_name, distance in queries_expected_songs_and_distances:
-        similarities[query_name] = 1/ (distance / almost_zero_value)
+        similarities[query_name] = 1 / (distance / almost_zero_value)
 
     return similarities
