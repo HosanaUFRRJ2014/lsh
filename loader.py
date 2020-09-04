@@ -87,7 +87,14 @@ def _extract_song_pitch_contour_segmentation(audio_path):
     Returns the audio path, the pitch vector, the onsets and durations of
     each pitch.
     '''
-    audio = music21.converter.parse(audio_path)
+    try:
+        audio = music21.converter.parse(audio_path)
+    except:
+        print(f"Couldn't load {audio_path}. Skipping it. ")
+        with open("serialize_expanded_dataset.log", "a") as f:
+            f.write(f"Couldn't load {audio_path}\n")
+
+        return None
 
     pitches = []
     durations = []
@@ -150,9 +157,11 @@ def _load_all_audio_pitch_contour_segmentations(filenames_file, path, extraction
         if audio_path in NOT_WORKING_AUDIOS:
             print(f'{audio_path}  skipped')
             continue
-        pitch_contour_segmentations.append(
-            extraction_function(audio_path)
-        )
+
+        extracted_values = extraction_function(audio_path)
+
+        if extracted_values:
+            pitch_contour_segmentations.append(extracted_values)
 
     return pitch_contour_segmentations
 
@@ -203,6 +212,9 @@ def load_audio_pitch_contour_segmentation(audio_path):
     except KeyError:
         log_unsupported_file_extension_error(audio_path, extension)
         exit(1)
+    
+    if returned_tuple == None:
+        raise Exception(f"Couldn't load {audio_path}. Aborting")
 
     return np.array([returned_tuple])
 
