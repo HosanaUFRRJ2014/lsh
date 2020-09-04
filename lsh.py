@@ -24,6 +24,7 @@ from messages import (
 
 from utils import (
     get_confidence_measurement,
+    print_confidence_measurements,
     train_confidence,
     unzip_pitch_contours
 )
