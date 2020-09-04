@@ -407,11 +407,6 @@ def apply_matching_algorithm_to_tfidf(choosed_algorithm, **kwargs):
     # else:
     #     _query = query
 
-    if choosed_algorithm == JACCARD_SIMILARITY:
-        result = calculate_jaccard_similarity(
-            query_audio=kwargs.get('query'),
-            candidate=kwargs.get('song')
-        )
     if choosed_algorithm == COSINE_SIMILARITY:
         result = calculate_cosine_similarity(
             query_tfidfs=kwargs.get('query_tfidfs'),

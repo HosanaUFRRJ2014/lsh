@@ -16,10 +16,12 @@ from constants import (
     METHODS,
     REQUIRE_INDEX_TYPE,
     SEARCH_METHODS,
+    SERIALIZE_PITCH_VECTORS,
     THRESHOLD_FILENAME
 )
 from messages import (
     log_bare_exception_error,
+    log_impossible_serialize_option_error,
     log_invalid_index_type_error,
     log_invalid_matching_algorithm_error,
     log_invalid_method_error,
@@ -52,18 +54,24 @@ def is_create_index_or_search_method(args):
     Says if passed method is creation or search of any index
     '''
     is_index_method = any([
-        index_type
-        for index_type in args
-        if index_type in REQUIRE_INDEX_TYPE
+        method
+        for method in args
+        if method in REQUIRE_INDEX_TYPE
     ])
 
     return is_index_method
+
+
+def is_serialize_pitches_method(args):
+    return SERIALIZE_PITCH_VECTORS in args
+
 
 def load_sparse_matrix(structure_name):
     """Loads a sparse matrix from a file in .npz format."""
     filename = f'{FILES_PATH}/{structure_name}.npz'
     matrix = load_npz(filename)
     return matrix
+
 
 def percent(part, whole):
     '''
@@ -175,14 +183,6 @@ def unzip_pitch_contours(pitch_contour_segmentations):
     return np.array(pitch_vectors)
 
 
-def is_invalid_matching_algorithm(matching_algorithm):
-    invalid_matching_algorithm = matching_algorithm not in MATCHING_ALGORITHMS
-    
-    if invalid_matching_algorithm:
-        log_invalid_matching_algorithm_error(matching_algorithm)
-        exit(1)
-
-
 def validate_program_args(**kwargs):
     """
     Validates the list of program args. If any of them is invalid, logs an
@@ -191,28 +191,17 @@ def validate_program_args(**kwargs):
         kwargs {dict} -- Dict of program args
     """
     method_name = kwargs['method_name']
-    matching_algorithm = kwargs['matching_algorithm']
-    index_types = kwargs['index_types']
+    serialize_options = kwargs['serialize_options']
     is_training_confidence = kwargs['is_training_confidence']
-    invalid_method = method_name not in METHODS
-    
-    invalid_index_type = len(
-        set(INDEX_TYPES).union(set(index_types))
-    ) != len(INDEX_TYPES)
 
     invalid_confidence_measurement = False
     if not is_training_confidence and method_name in SEARCH_METHODS:
         confidence_measurement = get_confidence_measurement()
         invalid_confidence_measurement = confidence_measurement is None
 
-    if invalid_method:
-        log_invalid_method_error(method_name)
-        exit(1)
-
-    is_invalid_matching_algorithm(matching_algorithm)
-
-    if invalid_index_type:
-        log_invalid_index_type_error(index_types)
-        exit(1)
     if invalid_confidence_measurement:
+        exit(1)
+
+    if method_name == SERIALIZE_PITCH_VECTORS and not serialize_options:
+        log_impossible_serialize_option_error()
         exit(1)

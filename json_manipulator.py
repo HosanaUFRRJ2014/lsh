@@ -9,12 +9,17 @@ from constants import (
     BATCH_SIZE,
     FILES_PATH,
     QUERY,
-    SONG
+    SONG,
+    SONGS,
+    EXPANDED_SONGS,
+    QUERIES
 )
 from loader import (
     get_songs_count,
+    get_expanded_songs_count,
     get_queries_count,
     load_all_songs_pitch_contour_segmentations,
+    load_all_expanded_songs_pitch_contour_segmentations,
     load_all_queries_pitch_contour_segmentations
 )
 from messages import (
@@ -31,7 +36,7 @@ class NumpyArrayEncoder(JSONEncoder):
 
 def dump_structure(
     structure, structure_name, cls=NumpyArrayEncoder,
-    as_numpy=True, as_pandas=False, extension="json"
+    as_numpy=True, as_pandas=False, extension="json", file_mode='w'
 ):
     '''
     Dumps Numpy ndarray , Pandas or Python objects. Defaults to numpy objects.
@@ -51,6 +56,9 @@ def dump_structure(
             dump(structure, json_file, cls=cls)
     elif as_pandas:
         pd.to_pickle(structure, filename)
+    else:
+        with open(filename, file_mode) as file:
+            file.write(str(structure))
 
 
 def load_structure(
@@ -97,32 +105,60 @@ def _serialize(args):
     return batch_filename, pitch_contour_segmentations
 
 
-def serialize_pitch_contour_segmentations():
+def serialize_pitch_contour_segmentations(
+    serialize_options
+):
     '''
     Serializes onsets, durations and pitch vectors of the songs and queries.
     '''
-    counters_loaders_and_names = [
-        (
-            get_songs_count,
-            load_all_songs_pitch_contour_segmentations,
-            'songs_pitch_contour_segmentations'
-        ),
-        (
-            get_queries_count,
-            load_all_queries_pitch_contour_segmentations,
-            'queries_pitch_contour_segmentations'
+    counters_loaders_and_names = []
+
+    include_songs = SONGS in serialize_options
+    include_expanded = EXPANDED_SONGS in serialize_options
+    include_queries = QUERIES in serialize_options
+
+    if include_songs:
+        songs_count = get_songs_count()
+        first_file_id = 1
+        counters_loaders_and_names.append(
+            (
+                songs_count,
+                first_file_id,
+                load_all_songs_pitch_contour_segmentations,
+                'songs_pitch_contour_segmentations'
+            )
         )
-    ]
+    if include_expanded:
+        expanded_count = get_expanded_songs_count()
+        first_file_id = 2
+        counters_loaders_and_names.append(
+            (
+                expanded_count,
+                first_file_id,
+                load_all_expanded_songs_pitch_contour_segmentations,
+                'songs_pitch_contour_segmentations'
+            )
+        )
+    
+    if include_queries:
+        queries_count = get_queries_count()
+        first_file_id = 1
+        counters_loaders_and_names.append(
+            (
+                queries_count,
+                first_file_id,
+                load_all_queries_pitch_contour_segmentations,
+                'queries_pitch_contour_segmentations'
+            )
+        )
 
-    for get_count, loader_function, structure_name in counters_loaders_and_names:
-        audios_count = get_count()
-
+    for audios_count, first_file_id, loader_function, structure_name in counters_loaders_and_names:
         chunk_size = BATCH_SIZE
         batches_count = ceil(audios_count / chunk_size)
         tasks = []
         start = 0
         end = chunk_size
-        for batch_id in range(1, batches_count + 1):
+        for batch_id in range(first_file_id, first_file_id + batches_count):
             tasks.append(
                 (loader_function, structure_name, batch_id, start, end)
             )
@@ -145,12 +181,14 @@ def serialize_pitch_contour_segmentations():
                     batch_pitch_countour_segmentations
                 )
 
-        # Saves serialized filenames in a file,
-        # in order to process them in deserialization fase
+        # Saves serialized filenames in a file, in order to process them in 
+        # deserialization fase
         file_of_filenames = f'{structure_name}_filenames'
         dump_structure(
             structure=batches_filenames,
-            structure_name=file_of_filenames
+            structure_name=file_of_filenames,
+            # override existing only if songs are being serialized
+            file_mode='w' if include_songs else 'a'
         )
 
 

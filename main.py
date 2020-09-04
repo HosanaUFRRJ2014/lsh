@@ -1,7 +1,8 @@
 # -*-coding:utf8;-*-
 import sys
-import numpy as np
 from argparse import ArgumentParser
+from distutils.util import strtobool
+import numpy as np
 
 from constants import (
     DEFAULT_NUMBER_OF_PERMUTATIONS,
@@ -17,6 +18,7 @@ from constants import (
     RECURSIVE_ALIGNMENT,
     KTRA,
     MATCHING_ALGORITHMS,
+    SERIALIZE_OPTIONS,
     SHOW_TOP_X
 )
 from json_manipulator import (
@@ -37,6 +39,7 @@ from loader import (
 )
 from utils import (
     is_create_index_or_search_method,
+    is_serialize_pitches_method,
     print_results,
     validate_program_args
 )
@@ -56,21 +59,35 @@ def process_args():
     parser.add_argument(
         "method",
         type=str,
-        help="Options: {}".format(
-            ', '.join(METHODS)
-        )
+        help="What step of this application you want to execute.",
+        choices=METHODS
     )
     parser.add_argument(
         "--index_types",
         "-i",
         nargs='+',
         type=str,
-        help="Options: {}. Inform at least one if \"method\" is any of \"{}\".".format(
+        help="Inform at least one if \"method\" is any of \"{}\".".format(
             ', '.join(INDEX_TYPES),
             ', '.join(REQUIRE_INDEX_TYPE)
         ),
+        choices=INDEX_TYPES,
         required=is_create_index_or_search_method(sys.argv)
     )
+    
+    parser.add_argument(
+        "--serialize_options",
+        "-ser_opt",
+        nargs='+',
+        type=str,
+        help="Inform at least one if \"method\" is \"{}\".".format(
+            ', '.join(SERIALIZE_OPTIONS),
+            ', '.join([SERIALIZE_PITCH_VECTORS])
+        ),
+        choices=SERIALIZE_OPTIONS,
+        required=is_serialize_pitches_method(sys.argv)
+    )
+
     parser.add_argument(
         "--query_filename",
         "-f",
@@ -97,15 +114,13 @@ def process_args():
         "-ma",
         type=str,
         help=f"It's expected to be informed alongside {SEARCH_METHODS} methods. "
-        + "Options: {}. Defaults to {}".format(
-            ', '.join(MATCHING_ALGORITHMS),
-            LINEAR_SCALING
-        ),
+        + "Defaults to {}".format(LINEAR_SCALING),
+        choices=MATCHING_ALGORITHMS,
         default=LINEAR_SCALING
     )
     parser.add_argument(
         "--use_ls",
-        type=bool,
+        type=strtobool,
         help=' '.join([
             f"If {RECURSIVE_ALIGNMENT} and {KTRA} will include {LINEAR_SCALING}.",
             f"Defaults to False. {no_need_to_inform_warning}"
@@ -114,7 +129,7 @@ def process_args():
     )
     parser.add_argument(
         "--train_confidence",
-        type=bool,
+        type=strtobool,
         help=" ".join([
             f"If \"True\" and informed alongside {SEARCH_ALL} method,",
             "confidence measurement will be in training mode,",
@@ -140,6 +155,7 @@ def process_args():
     num_permutations = args.num_permutations
     method_name = args.method
     index_types = args.index_types if args.index_types else []
+    serialize_options = args.serialize_options if args.serialize_options else []
     query_filename = args.query_filename
     matching_algorithm = args.matching_algorithm
     use_ls = args.use_ls
@@ -150,13 +166,13 @@ def process_args():
     # Validate args. If any of them is invalid, exit program.
     validate_program_args(
         method_name=method_name,
-        matching_algorithm=matching_algorithm,
-        index_types=index_types,
-        is_training_confidence=is_training_confidence
+        serialize_options=serialize_options,
+        is_training_confidence=is_training_confidence,
     )
 
     return method_name, \
         index_types, \
+        serialize_options, \
         query_filename, \
         num_permutations, \
         matching_algorithm, \
@@ -169,6 +185,7 @@ def process_args():
 def main():
     method_name,  \
         index_types,  \
+        serialize_options, \
         query_filename,  \
         num_permutations,  \
         matching_algorithm,  \
@@ -178,7 +195,9 @@ def main():
         num_audios = process_args()
 
     if method_name == SERIALIZE_PITCH_VECTORS:
-        serialize_pitch_contour_segmentations()
+        serialize_pitch_contour_segmentations(
+            serialize_options=serialize_options
+        )
     elif method_name == CREATE_INDEX:
         # Creating index(es)
         pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_audios)

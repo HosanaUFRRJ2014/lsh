@@ -16,6 +16,7 @@ FILES_PATH = 'generated_files'
 
 PATH_TO_DATASET = '../uniformiza_dataset'
 FILENAMES_OF_SONGS = f'{PATH_TO_DATASET}/midi_songs.list'
+FILENAMES_OF_EXPANDED_SONGS = f'{PATH_TO_DATASET}/midi_songs_expanse.list'
 WAVE_SONGS_PATH = 'songs_wav'
 MIDI_SONGS_PATH = 'songs'
 
@@ -63,6 +64,15 @@ METHODS = [
 
 
 REQUIRE_INDEX_TYPE = [CREATE_INDEX] + SEARCH_METHODS
+
+SONGS = "songs"
+EXPANDED_SONGS = "expanded_songs"
+QUERIES = "queries"
+SERIALIZE_OPTIONS = [
+    SONGS,
+    EXPANDED_SONGS,
+    QUERIES
+]
 
 ##
 # Matching Algorithms

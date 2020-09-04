@@ -11,13 +11,17 @@ from constants import (
     PATH_TO_DATASET,
     MIDI_SONGS_PATH,
     FILENAMES_OF_QUERIES,
+    FILENAMES_OF_EXPANDED_SONGS,
     QUERIES_PATH,
     EXPECTED_RESULTS,
     MIDI,
     WAVE
 )
 
-from messages import log_unsupported_file_extension_error
+from messages import (
+    log_seconds_not_found_warn,
+    log_unsupported_file_extension_error
+)
 
 Extractor = MusicExtractor()
 
@@ -89,15 +93,28 @@ def _extract_song_pitch_contour_segmentation(audio_path):
     durations = []
     onsets = []
     accumulated_time = 0
+
     for element in list(audio.recurse()):
         if isinstance(element, music21.note.Note):
             pitch_space = element.pitch.ps
-            duration = element.seconds
+            try:
+                duration = element.seconds
+            except Exception:
+                # log_seconds_not_found_warn(
+                #     audio_path,
+                #     element.name, 
+                #     pitch_space
+                # )
+                # FIXME: filter out these none values in 
+                # NLSH indexing and searching
+                duration = None
+
             pitches.append(pitch_space)
             durations.append(duration)
-            # Trying to estimate note onset here. It may not be correct.
+            # FIXME: Trying to estimate note onset here, but it depends on 
+            # duration. Its not correct.
             onsets.append(accumulated_time)
-            accumulated_time += duration
+            accumulated_time += duration if duration else 0
 
     return audio_path, pitches, onsets, durations
 
@@ -152,6 +169,11 @@ def get_songs_count():
         path=MIDI_SONGS_PATH
     )
 
+def get_expanded_songs_count():
+    return _get_audios_count(
+        filenames_file=FILENAMES_OF_EXPANDED_SONGS,
+        path=MIDI_SONGS_PATH
+    )
 
 def get_queries_count():
     return _get_audios_count(
@@ -185,7 +207,7 @@ def load_audio_pitch_contour_segmentation(audio_path):
     return np.array([returned_tuple])
 
 def load_all_songs_pitch_contour_segmentations(start=0, end=None):
-    audio_pitch_contour_segmentations = _load_all_audio_pitch_contour_segmentations(
+    return _load_all_audio_pitch_contour_segmentations(
         filenames_file=FILENAMES_OF_SONGS,
         path=MIDI_SONGS_PATH,
         extraction_function=_extract_song_pitch_contour_segmentation,
@@ -193,7 +215,15 @@ def load_all_songs_pitch_contour_segmentations(start=0, end=None):
         end=end
     )
 
-    return audio_pitch_contour_segmentations
+
+def load_all_expanded_songs_pitch_contour_segmentations(start=0, end=None):
+    return _load_all_audio_pitch_contour_segmentations(
+        filenames_file=FILENAMES_OF_EXPANDED_SONGS,
+        path=MIDI_SONGS_PATH,
+        extraction_function=_extract_song_pitch_contour_segmentation,
+        start=start,
+        end=end
+    )
 
 
 def load_all_queries_pitch_contour_segmentations(start=0, end=None):

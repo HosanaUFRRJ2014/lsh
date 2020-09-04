@@ -6,6 +6,7 @@ from constants import (
     FILE_TYPE_EXTENSIONS,
     INDEX_TYPES,
     SERIALIZE_PITCH_VECTORS,
+    SERIALIZE_OPTIONS,
     MATCHING_ALGORITHMS,
     MANHATTAN_DISTANCE,
     METHODS
@@ -32,6 +33,14 @@ def log_forgotten_step_warn(error, audio_type):
         "tfidf calculation step before."
     ])
     logging.warn(message)
+
+
+def log_impossible_serialize_option_error():
+    message = " ".join([
+        "You must inform at least one of serialization options",
+        SERIALIZE_OPTIONS
+    ])
+    logging.error(message)
 
 
 def log_invalid_audio_type_error(audio_type):
@@ -94,6 +103,16 @@ def log_no_serialized_pitch_contour_segmentations_error(structure_name):
         "to serialize pitch vectors first."
     ])
     logging.error(message)
+
+
+def log_seconds_not_found_warn(song_name, note_name, pitch):
+    message = " ".join([
+        f"{song_name}: Second was not found for note {note_name}",
+        f"(pitch, {pitch}). Assuming value as None.",
+        "You will need to filter out these none values if you try to use NLSH",
+        "indexing and searching. Remember to fix onsets too."
+    ])
+    logging.warn(message)
 
 
 def log_unsupported_file_extension_error(audio_path, extension):
