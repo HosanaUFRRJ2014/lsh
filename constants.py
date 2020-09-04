@@ -1,4 +1,4 @@
-DEFAULT_NUMBER_OF_PERMUTATIONS = 1000
+DEFAULT_NUMBER_OF_PERMUTATIONS = 100
 # Limits the max number of results to display
 SHOW_TOP_X = 20
 
