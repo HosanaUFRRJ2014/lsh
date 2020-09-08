@@ -28,18 +28,14 @@ from constants import (
     SONG
 )
 from json_manipulator import (
-    deserialize_queries_pitch_contour_segmentations,
-    deserialize_songs_pitch_contour_segmentations,
     deserialize_audios_pitch_contour_segmentations,
     dump_structure,
     get_songs_count,
     get_queries_count,
     load_structure
 )
-from loader import load_expected_results
 from messages import ( 
-    log_invalid_audio_type_error,
-    log_forgotten_step_warn
+   log_forgotten_step_warn
 )
 from utils import save_graphic
 
@@ -59,16 +55,17 @@ def process_args():
 
     default_min_tfidf = 0.01
     default_save_graphic = True
+    default_num_songs = get_songs_count()
 
     parser.add_argument(
-        "--num_audios",
+        "--num_songs",
         "-na",
         type=int,
         help=" ".join([
-            "Number of audios to consider. If not informed,",
-            "will apply calculations for the entire dataset."
+            "Number of songs to consider. If not informed,",
+            "will apply calculations only considering MIREX datasets."
         ]),
-        # default=default_num_audios
+        default=default_num_songs
     )
 
     parser.add_argument(
@@ -106,18 +103,12 @@ def process_args():
     args = parser.parse_args()
 
     audio_type = args.audio_type
-    if args.num_audios:
-        num_audios = args.num_audios
-    else:
-        if audio_type == QUERY:
-            num_audios = get_queries_count()
-        if audio_type == SONG:
-            num_audios = get_songs_count()
+    num_songs = args.num_songs
 
     min_tfidf = args.min_tfidf
     will_save_graphic = args.save_graphic
 
-    return num_audios, min_tfidf, audio_type, will_save_graphic
+    return num_songs, min_tfidf, audio_type, will_save_graphic
 
 
 def obtain_remaining_pitches(**kwargs):
@@ -185,8 +176,12 @@ def extract_remaining_pitches(
 
 
 def main():
-    percentages = {}
-    num_audios, min_tfidf, audio_type, will_save_graphic = process_args()
+    num_songs, min_tfidf, audio_type, will_save_graphic = process_args()
+
+    if audio_type == QUERY:
+        num_audios = get_queries_count()
+    else:
+        num_audios = num_songs
 
     try:
         all_pitch_contour_segmentations = deserialize_audios_pitch_contour_segmentations(audio_type, num_audios)
@@ -231,7 +226,7 @@ def main():
     # Remaining pitches separated by file
     dump_structure(
         structure=all_remaining_pitches,
-        structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{audio_type}'
+        structure_name=f"{num_audios}_songs/remaining_pitches_min_tfidf_{min_tfidf}_per_{audio_type}"
     )
 
 

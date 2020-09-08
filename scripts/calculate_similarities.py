@@ -8,7 +8,6 @@ sys.path.append(
         os.pardir
     )
 )
-
 from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
@@ -25,7 +24,7 @@ from matching_algorithms import (
     normalize_distance_to_similarity
 )
 from loader import load_expected_results
-from loader import get_songs_count
+from loader import get_songs_count, get_expanded_songs_count
 from constants import (
     SONG,
     QUERY,
@@ -35,7 +34,7 @@ from constants import (
     COSINE_SIMILARITY,
     SIMILARITY_MATHING_ALGORITHMS
 )
-from utils import is_invalid_matching_algorithm
+
 from messages import (
     log_invalid_matching_algorithm_error,
     log_useless_arg_warn
@@ -44,30 +43,26 @@ from messages import (
 def process_args():
     parser = ArgumentParser()
 
-    default_num_audios = get_songs_count()
-    default_plot_tfdfs = False
-    default_plot_remaining_percents = True
+    default_num_songs = None # get_songs_count() + get_expanded_songs_count()
 
-    # parser.add_argument(
-    #     "--num_audios",
-    #     "-na",
-    #     type=int,
-    #     help=" ".join([
-    #         "Number of audios to consider. If not informed,",
-    #         "will apply calculations for the entire dataset."
-    #     ]),
-    #     default=default_num_audios
-    # )
+    parser.add_argument(
+        "--num_audios",
+        "-na",
+        type=int,
+        help=" ".join([
+            "Number of audios to consider. If not informed,",
+            "will apply calculations only considering MIREX datasets."
+        ]),
+        default=default_num_songs
+    )
 
     parser.add_argument(
         "--matching_algorithm",
         "-ma",
         type=str,
-        help="Options: {}. Defaults to {}".format(
-            ', '.join(MATCHING_ALGORITHMS),
-            JACCARD_SIMILARITY
-        ),
-        default=JACCARD_SIMILARITY
+        help=f"Defaults to {JACCARD_SIMILARITY}",
+        default=JACCARD_SIMILARITY,
+        choices=MATCHING_ALGORITHMS
     )
 
     parser.add_argument(
@@ -79,18 +74,16 @@ def process_args():
 
     args = parser.parse_args()
 
-    # num_audios = args.num_audios
+    num_songs = args.num_audios
     min_tfidf = args.min_tfidf if args.min_tfidf else 0.0
     matching_algorithm = args.matching_algorithm
-    is_invalid_matching_algorithm(matching_algorithm)
-
-    # return num_audios, min_tfidf
-    return min_tfidf, matching_algorithm
+    # return num_songs, min_tfidf
+    return num_songs, min_tfidf, matching_algorithm
 
 
-def load_originals():     
-    all_songs_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations()
-    all_queries_pitch_countour_segmentations = deserialize_queries_pitch_contour_segmentations()
+def load_originals(num_songs):
+    all_songs_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_songs)
+    all_queries_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations()
 
     songs_filenames, songs_pitches_values, _, _ = zip(
         *all_songs_pitch_contour_segmentations
@@ -98,21 +91,21 @@ def load_originals():
     songs_original_pitches = dict(zip(songs_filenames, songs_pitches_values))
 
     queries_filenames, queries_pitches_values, _, _ = zip(
-        *all_queries_pitch_countour_segmentations
+        *all_queries_pitch_contour_segmentations
     )
     queries_original_pitches = dict(zip(queries_filenames, queries_pitches_values))
 
     return songs_original_pitches, queries_original_pitches
 
 
-def load_remainings(min_tfidf):
+def load_remainings(num_songs, min_tfidf):
     # TODO: Add custom try/except error message here
     songs_remainings_pitches = load_structure(
-        structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{SONG}',
+        structure_name=f'{num_songs}_songs/remaining_pitches_min_tfidf_{min_tfidf}_per_{SONG}',
         as_numpy=False
     )
     queries_remaining_pitches = load_structure(
-        structure_name=f'remaining_pitches_min_tfidf_{min_tfidf}_per_{QUERY}',
+        structure_name=f'{num_songs}_songs/remaining_pitches_min_tfidf_{min_tfidf}_per_{QUERY}',
         as_numpy=False
     )
     return songs_remainings_pitches, queries_remaining_pitches
@@ -121,17 +114,17 @@ def load_remainings(min_tfidf):
 def main():
     similarities_or_distances = {}
 
-    min_tfidf, matching_algorithm = process_args()
+    num_songs, min_tfidf, matching_algorithm = process_args()
     results_mapping = load_expected_results()
     songs_tfidfs = load_structure(
-        structure_name=f'{SONG}_tf_idfs_per_file',
+        structure_name=f'{num_songs}_songs/{SONG}_tf_idfs_per_file',
         as_numpy=False,
         as_pandas=True,
         extension="pkl"
     )
 
     queries_tfidfs = load_structure(
-        structure_name=f'{QUERY}_tf_idfs_per_file',
+        structure_name=f'{num_songs}_songs/{QUERY}_tf_idfs_per_file',
         as_numpy=False,
         as_pandas=True,
         extension="pkl"
@@ -139,10 +132,10 @@ def main():
 
     if min_tfidf:
         songs, queries = load_remainings(min_tfidf)
-        structure_name = f"{matching_algorithm}_min_tfidf_{min_tfidf}"
+        structure_name = f"{num_songs}_songs/{matching_algorithm}_min_tfidf_{min_tfidf}"
     else:
-        songs, queries = load_originals()
-        structure_name = f"{matching_algorithm}"
+        songs, queries = load_originals(num_songs)
+        structure_name = f"{num_songs}_songs/{matching_algorithm}"
 
 
     queries_expected_songs_and_results = []
@@ -191,7 +184,6 @@ def main():
                 similarities_or_distances[query_filename]
             )
         )
-    
 
     similarities = (
         similarities_or_distances 
@@ -201,11 +193,12 @@ def main():
         )
     )
 
-    path = "similarities"
+    path = f"{num_songs}_songs/similarities"
     dump_structure(
         structure_name=f"{path}/{structure_name}",
         structure=similarities
     )
+
 
 if __name__ == "__main__":
     main()

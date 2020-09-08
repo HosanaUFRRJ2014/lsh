@@ -47,7 +47,7 @@ def process_args():
         type=int,
         help=" ".join([
             "Number of audios to consider. If not informed,",
-            "will apply calculations for the entire dataset."
+            "will apply calculations only considering MIREX datasets."
         ]),
         default=default_num_audios
     )
@@ -180,11 +180,11 @@ def extract_plotable_tfidfs(tfidfs, all_pitch_contour_segmentations, min_tfidf=0
 
 def main():
     percentages = {}
-    num_audios, save_tfidfs_graphic = process_args()
+    num_songs, save_tfidfs_graphic = process_args()
 
-    all_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_audios)
+    all_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_songs)
     tfidfs = calculate_tfidfs(
-        num_audios, all_pitch_contour_segmentations
+        num_songs, all_pitch_contour_segmentations
     )
 
     # if save_tfidfs_graphic:
@@ -204,7 +204,7 @@ def main():
 
     dump_structure(
         data_frame,
-        structure_name=f'{SONG}_tf_idfs_per_file',
+        structure_name=f"{num_songs}_songs/{SONG}_tf_idfs_per_file",
         as_numpy=False,
         as_pandas=True,
         extension="pkl"
