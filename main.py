@@ -2,7 +2,7 @@
 import sys
 from argparse import ArgumentParser
 from distutils.util import strtobool
-import numpy as np
+
 
 from constants import (
     DEFAULT_NUMBER_OF_PERMUTATIONS,
@@ -46,10 +46,10 @@ from utils import (
 
 
 def process_args():
-    '''
+    """
     Processes program args.
     Returns a tuple containing the processed program args.
-    '''
+    """
     no_need_to_inform_warning = "Don't inform if you want the default value."
     parser = ArgumentParser()
     help_msg = "".join([
@@ -144,7 +144,7 @@ def process_args():
         "--num_audios",
         type=int,
         help=' '.join([
-            f"If especified, limits number of audios for {CREATE_INDEX} and",
+            f"If specified, limits number of audios for {CREATE_INDEX} and",
             f"{SEARCH_ALL} methods.",
             "Gets the first 'num_audios' audios.",
             "Defaults to None."
@@ -208,6 +208,7 @@ def main():
         )
     elif method_name in SEARCH_METHODS:
         # Loading query and song pitch vectors
+        query_pitch_contour_segmentations = None
         if method_name == SEARCH:
             query_pitch_contour_segmentations = load_audio_pitch_contour_segmentation(query_filename)
         elif method_name == SEARCH_ALL:

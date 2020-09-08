@@ -178,11 +178,13 @@ def get_songs_count():
         path=MIDI_SONGS_PATH
     )
 
+
 def get_expanded_songs_count():
     return _get_audios_count(
         filenames_file=FILENAMES_OF_EXPANDED_SONGS,
         path=MIDI_SONGS_PATH
     )
+
 
 def get_queries_count():
     return _get_audios_count(
@@ -217,6 +219,7 @@ def load_audio_pitch_contour_segmentation(audio_path):
         raise Exception(f"Couldn't load {audio_path}. Aborting")
 
     return np.array([returned_tuple])
+
 
 def load_all_songs_pitch_contour_segmentations(start=0, end=None):
     return _load_all_audio_pitch_contour_segmentations(
