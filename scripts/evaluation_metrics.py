@@ -31,7 +31,7 @@ def process_args():
     default_num_songs = None # get_songs_count() + get_expanded_songs_count()
 
     parser.add_argument(
-        "--num_audios",
+        "--num_songs",
         "-na",
         type=int,
         help=" ".join([
@@ -69,7 +69,7 @@ def process_args():
 
     args = parser.parse_args()
 
-    num_songs = args.num_audios
+    num_songs = args.num_songs
     min_tfidf = args.min_tfidf
     metric_type = args.metric_type
     matching_algorithm = args.matching_algorithm

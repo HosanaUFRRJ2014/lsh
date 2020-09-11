@@ -42,7 +42,7 @@ def process_args():
     default_calc_remaining_percents = True
 
     parser.add_argument(
-        "--num_audios",
+        "--num_songs",
         "-na",
         type=int,
         help=" ".join([

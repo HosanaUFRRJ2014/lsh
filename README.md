@@ -121,37 +121,37 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 
 1. Cálculo de TF-IDF para cada pitch do dataset:
 
-        python scripts/song_tfidf_calculation.py
+        python scripts/song_tfidf_calculation.py --num_songs $NUM_SONGS
 
-        python scripts/query_tfidf_calculation.py
+        python scripts/query_tfidf_calculation.py   --num_songs $NUM_SONGS
 
 2. Extrair os pitches remanescentes das músicas e das queries acima de MIN-TFIDF (valor float)
 
-        python scripts/tfidf_pitch_extraction.py --audio_type song --min_tfidf ${MIN_TFIDF}
+        python scripts/tfidf_pitch_extraction.py --audio_type song --min_tfidf ${MIN_TFIDF}  --num_songs $NUM_SONGS
 
-        python scripts/tfidf_pitch_extraction.py --audio_type query --min_tfidf ${MIN_TFIDF}
+        python scripts/tfidf_pitch_extraction.py --audio_type query --min_tfidf ${MIN_TFIDF}  --num_songs $NUM_SONGS
 
     **Obs:** Usar o mesmo valor de ${MIN_TFIDF} nos comandos acima.
 
 3. Cálculo das similaridades entre cada música e seu resultado esperado, com e sem a aplicação da etapa anterior
 
         # Músicas e queries originais
-        python scripts/calculate_similarities.py -ma ${MATCHING_ALGORITHIM}
+        python scripts/calculate_similarities.py -ma ${MATCHING_ALGORITHIM}  --num_songs $NUM_SONGS
 
         # Músicas e queries que passaram pela etapa anterior
-        python scripts/calculate_similarities.py --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}
+        python scripts/calculate_similarities.py --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}  --num_songs $NUM_SONGS
 
 4. Cálculo do Mean Absolute Error (MAE)
 
         METRIC_TYPE="mae"
 
-        python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}
+        python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}  --num_songs $NUM_SONGS
 
 
 5. Cálculo do Root Mean Squared Error (RMSE)
 
         METRIC_TYPE="rmse"
 
-        python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}
+        python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}  --num_songs $NUM_SONGS
 
     

@@ -40,17 +40,17 @@ def process_args():
 
     default_save_graphic = True
 
-    default_num_audios = None  # get_queries_count()
+    default_num_songs = get_queries_count()
 
     parser.add_argument(
-        "--num_audios",
+        "--num_songs",
         "-na",
         type=int,
         help=" ".join([
             "Number of songs to consider. If not informed,",
             "will apply calculations only considering MIREX datasets."
         ]),
-        default=default_num_audios
+        default=default_num_songs
     )
 
     parser.add_argument(
@@ -65,10 +65,10 @@ def process_args():
 
     args = parser.parse_args()
 
-    num_audios = args.num_audios
+    num_songs = args.num_songs
     will_save_graphic = args.save_graphic
 
-    return num_audios, will_save_graphic
+    return num_songs, will_save_graphic
 
 
 def get_vocabulary(data_frame):
