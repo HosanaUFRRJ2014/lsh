@@ -114,6 +114,16 @@ INITIAL_KTRA_K_VALUE = 1
 QUERY = "query"
 SONG = "song"
 
+TF = "tf"
+IDF = "idf"
+TFIDF = "tf_idf"
+
+TFIDF_ALGORITHM_PARTS = [
+    TF,
+    IDF,
+    TFIDF
+]
+
 AUDIO_TYPES = [
     QUERY,
     SONG
