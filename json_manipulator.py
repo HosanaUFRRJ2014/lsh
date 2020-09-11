@@ -202,13 +202,16 @@ def _deserialize_pitch_contour_segmentations(file_of_filenames, num_audios=None)
         log_no_serialized_pitch_contour_segmentations_error(file_of_filenames)
         exit(1)
 
+    loaded_audios_count = 0
     for filename in list_of_files:
-        batch_pitch_contours = load_structure(structure_name=filename)
-        if num_audios and len(batch_pitch_contours) > num_audios:
-            batch_pitch_contours = batch_pitch_contours[:num_audios]
-            pitch_contour_segmentations = batch_pitch_contours
-            break
-        pitch_contour_segmentations.extend(batch_pitch_contours)
+        if loaded_audios_count < num_audios:
+            batch_pitch_contours = load_structure(structure_name=filename)
+            loaded_audios_count += len(batch_pitch_contours)
+
+            if loaded_audios_count > num_audios:
+                exceeded_size = loaded_audios_count - num_audios
+                batch_pitch_contours = batch_pitch_contours[: len(batch_pitch_contours) - exceeded_size]
+            pitch_contour_segmentations.extend(batch_pitch_contours)
 
     return pitch_contour_segmentations
 
