@@ -118,12 +118,19 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
 
 **Nota:** Ative o virtual environment
 
+Executar passos 1 a 5 de uma única vez (não deve funcionar para quantidade de músicas muito grande):
+
+        python scripts/tfidf_exec.py --num_songs ${NUM_SONGS} --min_tfidf ${MIN_TFIDF_1} ${MIN_TFIDF_2}
+
+ou...
+
+Executar passo a passo:
 
 1. Cálculo de TF-IDF para cada pitch do dataset:
 
         python scripts/song_tfidf_calculation.py --num_songs $NUM_SONGS
 
-        python scripts/query_tfidf_calculation.py   --num_songs $NUM_SONGS
+        python scripts/query_tfidf_calculation.py --num_songs $NUM_SONGS
 
 2. Extrair os pitches remanescentes das músicas e das queries acima de MIN-TFIDF (valor float)
 
@@ -146,7 +153,6 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
         METRIC_TYPE="mae"
 
         python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}  --num_songs $NUM_SONGS
-
 
 5. Cálculo do Root Mean Squared Error (RMSE)
 

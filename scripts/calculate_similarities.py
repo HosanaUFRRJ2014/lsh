@@ -32,7 +32,7 @@ from constants import (
     MATCHING_ALGORITHMS,
     JACCARD_SIMILARITY,
     COSINE_SIMILARITY,
-    SIMILARITY_MATHING_ALGORITHMS
+    SIMILARITY_MATCHING_ALGORITHMS
 )
 
 from messages import (
@@ -117,7 +117,7 @@ def main():
     num_songs, min_tfidf, matching_algorithm = process_args()
     results_mapping = load_expected_results()
     songs_tfidfs = load_structure(
-        structure_name=f'{num_songs}_songs/{SONG}_tf_idfs_per_file',
+        structure_name=f"{num_songs}_songs/{SONG}_tf_idfs_per_file",
         as_numpy=False,
         as_pandas=True,
         extension="pkl"
@@ -131,11 +131,11 @@ def main():
     )
 
     if min_tfidf:
-        songs, queries = load_remainings(min_tfidf)
-        structure_name = f"{num_songs}_songs/{matching_algorithm}_min_tfidf_{min_tfidf}"
+        songs, queries = load_remainings(num_songs, min_tfidf)
+        structure_name = f"{matching_algorithm}_min_tfidf_{min_tfidf}"
     else:
         songs, queries = load_originals(num_songs)
-        structure_name = f"{num_songs}_songs/{matching_algorithm}"
+        structure_name = f"{matching_algorithm}"
 
 
     queries_expected_songs_and_results = []
@@ -187,7 +187,7 @@ def main():
 
     similarities = (
         similarities_or_distances 
-        if matching_algorithm in SIMILARITY_MATHING_ALGORITHMS
+        if matching_algorithm in SIMILARITY_MATCHING_ALGORITHMS
         else normalize_distance_to_similarity(
             queries_expected_songs_and_results
         )

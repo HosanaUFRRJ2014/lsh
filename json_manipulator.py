@@ -206,6 +206,9 @@ def _deserialize_pitch_contour_segmentations(file_of_filenames, num_audios=None)
     for filename in list_of_files:
         if loaded_audios_count < num_audios:
             batch_pitch_contours = load_structure(structure_name=filename)
+
+            # Workaround to ignore files without data
+            batch_pitch_contours = list(filter(lambda contour: len(contour[1]) > 0, batch_pitch_contours))
             loaded_audios_count += len(batch_pitch_contours)
 
             if loaded_audios_count > num_audios:
@@ -226,6 +229,7 @@ def deserialize_songs_pitch_contour_segmentations(num_audios=None):
 
 
 def deserialize_queries_pitch_contour_segmentations(num_audios=None):
+    num_audios = num_audios if num_audios else get_queries_count()
     file_of_filenames = 'queries_pitch_contour_segmentations_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
         file_of_filenames=file_of_filenames,

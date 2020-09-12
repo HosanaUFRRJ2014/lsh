@@ -186,7 +186,7 @@ def main():
     try:
         all_pitch_contour_segmentations = deserialize_audios_pitch_contour_segmentations(audio_type, num_audios)
         tfidfs = load_structure(
-            structure_name=f'{audio_type}_tf_idfs_per_file',
+            structure_name=f'{num_songs}_songs/{audio_type}_tf_idfs_per_file',
             as_numpy=False,
             as_pandas=True,
             extension="pkl"
@@ -218,15 +218,15 @@ def main():
             xlabel='Percentage',
             ylabel='Amount of audios',
             title=" ".join([
-                "Percentage of remaining pitches after appling TF-IDF",
-                f"in {num_audios} {audio_type} (min-tfidf>{min_tfidf})"
+                f"{num_songs}_songs/Percentage of remaining pitches after appling TF-IDF",
+                f"in {num_audios} {audio_type}s (min-tfidf>{min_tfidf})"
             ])
         )
 
     # Remaining pitches separated by file
     dump_structure(
         structure=all_remaining_pitches,
-        structure_name=f"{num_audios}_songs/remaining_pitches_min_tfidf_{min_tfidf}_per_{audio_type}"
+        structure_name=f"{num_songs}_songs/remaining_pitches_min_tfidf_{min_tfidf}_per_{audio_type}"
     )
 
 

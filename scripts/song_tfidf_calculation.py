@@ -38,7 +38,6 @@ def process_args():
     )
 
     default_num_songs = get_songs_count()
-    default_min_tfidf = 0.01
     default_plot_tfdfs = False
     default_calc_remaining_percents = True
 
@@ -167,7 +166,7 @@ def calculate_tfidfs(idfs, tfs_of_all_audios):
     """
     # maps tf-idfs of all pitches in an audio for each audio
     tfidfs_per_audios = {}
-    for filename, audio_tfs in tfs_of_all_audios:
+    for filename, audio_tfs in tfs_of_all_audios.items():
         tfidf_audio = {}
         for pitch, pitch_tf in audio_tfs.items():
             idf = idfs[pitch]
@@ -243,8 +242,8 @@ def main():
             tfidfs = calculate_tfidfs_full(
                 num_songs, all_pitch_contour_segmentations
             )
-            algorithm_step == TFIDF
-        data_frame = pd.DataFrame.from_dict(tfidfs, orient='index', dtype=np.float64)
+            algorithm_step = TFIDF
+        data_frame = pd.DataFrame.from_dict(tfidfs, orient='index')
 
 
     # if save_tfidfs_graphic:
@@ -259,8 +258,6 @@ def main():
     #         ylabel='Amount of audios',
     #         title=f'{num_songs}_songs/TF-IDF in {num_songs} songs (min-tfidf>{min_tfidf})'
     #     )
-
-
 
     structure_name = f"{num_songs}_songs/{SONG}_{algorithm_step}s_per_file"
     dump_structure(
