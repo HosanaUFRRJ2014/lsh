@@ -29,7 +29,7 @@ def log_could_not_calculate_mrr_warning(query_name):
 
 def log_forgotten_step_warn(error, audio_type):
     message = " ".join([
-        f"{error}.\n Hint: \nYou may have forgotten to perform {audio_type}"
+        f"{error}.\n Hint: \nYou may have forgotten to perform {audio_type} "
         "tfidf calculation step before."
     ])
     logging.warn(message)

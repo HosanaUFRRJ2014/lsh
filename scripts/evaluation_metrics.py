@@ -24,11 +24,22 @@ from json_manipulator import (
     load_structure
 )
 
-from utils import is_invalid_matching_algorithm
-
 
 def process_args():
     parser = ArgumentParser()
+
+    default_num_songs = None # get_songs_count() + get_expanded_songs_count()
+
+    parser.add_argument(
+        "--num_songs",
+        "-na",
+        type=int,
+        help=" ".join([
+            "Number of audios to consider. If not informed,",
+            "will apply calculations only considering MIREX datasets."
+        ]),
+        default=default_num_songs
+    )
 
     parser.add_argument(
         "--metric_type",
@@ -45,7 +56,8 @@ def process_args():
             ', '.join(MATCHING_ALGORITHMS),
             JACCARD_SIMILARITY
         ),
-        default=JACCARD_SIMILARITY
+        default=JACCARD_SIMILARITY,
+        choices=MATCHING_ALGORITHMS
     )
 
     parser.add_argument(
@@ -57,13 +69,12 @@ def process_args():
 
     args = parser.parse_args()
 
+    num_songs = args.num_songs
     min_tfidf = args.min_tfidf
     metric_type = args.metric_type
     matching_algorithm = args.matching_algorithm
-    
-    is_invalid_matching_algorithm(matching_algorithm)
-    
-    return min_tfidf, metric_type, matching_algorithm
+
+    return num_songs, min_tfidf, metric_type, matching_algorithm
 
 
 def mean_absolute_error(similarities, tfidf_similarities, square=False):
@@ -108,9 +119,9 @@ def apply_metric(metric_type, original_similarities, tfidf_similarities):
 
 
 def main():
-    min_tfidf, metric_type, matching_algorithm = process_args()
+    num_songs, min_tfidf, metric_type, matching_algorithm = process_args()
 
-    path = "similarities"
+    path = f"{num_songs}_songs/similarities"
     similarities = load_structure(
         structure_name=f"{path}/{matching_algorithm}",
         as_numpy=False
@@ -126,7 +137,7 @@ def main():
         list(tfidf_similarities.values())
     )
 
-    evaluation_path = "evaluations"
+    evaluation_path = f"{num_songs}_songs/evaluations"
     dump_structure(
         structure=result,
         structure_name=f"{evaluation_path}/{matching_algorithm}_{metric_type}_min_tfidf_{min_tfidf}",

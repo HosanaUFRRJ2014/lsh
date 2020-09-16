@@ -34,41 +34,23 @@ from loader import load_expected_results
 
 
 def process_args():
-    # description = textwrap.dedent('''\
-    # Extracts pitches above the min_tfidf threshold.
-    # Saves:
-    #     - Remaining pitches separated by file (songs and queries filenames),
-    #     - Set of remaining pitches,
-    #     - etc
-    # ''')
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
-        # description=description
     )
 
-    default_min_tfidf = 0.01
     default_save_graphic = True
 
+    default_num_songs = get_queries_count()
+
     parser.add_argument(
-        "--num_audios",
+        "--num_songs",
         "-na",
         type=int,
         help=" ".join([
-            "Number of audios to consider. If not informed,",
-            "will apply calculations for the entire dataset."
+            "Number of songs to consider. If not informed,",
+            "will apply calculations only considering MIREX datasets."
         ]),
-        # default=default_num_audios
-    )
-
-    parser.add_argument(
-        "--min_tfidf",
-        "-min",
-        type=float,
-        help=" ".join([
-            f"Audios with td-idf below this threshold will be ignored.",
-            f"Defaults to {default_min_tfidf}."
-        ]),
-        default=default_min_tfidf
+        default=default_num_songs
     )
 
     parser.add_argument(
@@ -83,15 +65,10 @@ def process_args():
 
     args = parser.parse_args()
 
-    if args.num_audios:
-        num_audios = args.num_audios
-    else:
-        num_audios = get_queries_count()
-
-    min_tfidf = args.min_tfidf
+    num_songs = args.num_songs
     will_save_graphic = args.save_graphic
 
-    return num_audios, min_tfidf, will_save_graphic
+    return num_songs, will_save_graphic
 
 
 def get_vocabulary(data_frame):
@@ -124,18 +101,15 @@ def estimate_query_tfidfs(**kwargs):
             # pitch_tfidf = tfidfs.at[song_filename, pitch]
             # if pitch_tfidf: # and not np.isnan(pitch_tfidf):
 
-        
-
     return query_tfidfs
 
 
-def estimate_queries_tfidfs(tfidfs, all_pitch_contour_segmentations, num_audios, min_tfidf, vocabulary):
+def estimate_queries_tfidfs(tfidfs, all_pitch_contour_segmentations, vocabulary):
     queries_tfidfs = {}
 
     results_mapping = load_expected_results()
     kwargs = {
         "tfidfs": tfidfs,
-        # "min_tfidf": min_tfidf,
         "vocabulary": vocabulary,
         "results_mapping": results_mapping
     }
@@ -159,25 +133,21 @@ def estimate_queries_tfidfs(tfidfs, all_pitch_contour_segmentations, num_audios,
 
 
 def main():
-    num_audios, min_tfidf, will_save_graphic = process_args()
+    num_songs, will_save_graphic = process_args()
 
     tfidf_data_frame = load_structure(
-        structure_name=f'{SONG}_tf_idfs_per_file',
+        structure_name=f"{num_songs}_songs/{SONG}_tf_idfs_per_file",
         as_numpy=False,
         as_pandas=True,
         extension='pkl'
     )
     vocabulary = get_vocabulary(tfidf_data_frame)
 
-    all_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations(
-        num_audios=num_audios
-    )
+    all_pitch_contour_segmentations = deserialize_queries_pitch_contour_segmentations()
 
     queries_tfidfs = estimate_queries_tfidfs(
         tfidf_data_frame,
         all_pitch_contour_segmentations,
-        num_audios,
-        min_tfidf=min_tfidf,
         vocabulary=vocabulary
     )
 
@@ -189,7 +159,7 @@ def main():
 
     dump_structure(
         data_frame,
-        structure_name=f'{QUERY}_tf_idfs_per_file',
+        structure_name=f"{num_songs}_songs/{QUERY}_tf_idfs_per_file",
         as_numpy=False,
         as_pandas=True,
         extension="pkl"

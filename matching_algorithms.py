@@ -428,20 +428,17 @@ def apply_matching_algorithm_to_tfidf(choosed_algorithm, **kwargs):
 def normalize_distance_to_similarity(queries_expected_songs_and_distances):
     """
     Tries to "normalize" distance to similarity range [0-100].
-    As far as it is, as different it is. As near as it is, as similar it is too.
-    So, bigger distances must result in the smaller similarities, and the 
-    other way around. 
-    In an ideal world, zero distance would mean that the two are identical.
-    However, we can't perform this, once it would result in a ZeroDivision
-    exception. So, a very smaller value is chosen is place of zero to help us
-    estimate the similarity.
-    At the end, its also needed to invert the result, because we are dealing
-    with inversely proportional quantities.
+    Bigger distances must result in the smaller similarities, and the
+    other way around.
+    A base logarithm function y=log1/2(x) is able to define range [0-1],
+    where y=distance and x=similarity.
+    In order to have range [0-100], its need to divide x by 100:
+    y=log1/2(x/100) and x=100(1/2)^y.
     """
 
     similarities = {}
-    almost_zero_value = 0.0001
     for query_name, expected_song_name, distance in queries_expected_songs_and_distances:
-        similarities[query_name] = 1 / (distance / almost_zero_value)
+        similarities[query_name] = 100 * pow(0.5, distance)
+        print(f"{query_name} : distance={distance}\t\tsimilarity{similarities[query_name]}")
 
     return similarities
