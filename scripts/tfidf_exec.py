@@ -82,22 +82,23 @@ def will_exec_command(structure_name):
 
 def main():
     commands = []
-    matching_algorithms = SIMILARITY_MATCHING_ALGORITHMS # + ALIGNMENT_MATCHING_ALGORITHMS
+    # matching_algorithms = SIMILARITY_MATCHING_ALGORITHMS + ALIGNMENT_MATCHING_ALGORITHMS
+    matching_algorithms = ALIGNMENT_MATCHING_ALGORITHMS
     num_songs, min_tfidfs = process_args()
 
-    will_exec_tfidf = will_exec_command(f"{num_songs}_songs/{SONG}_tf_idfs_per_file")
-
-    if will_exec_tfidf:
-        commands.extend([
-            f"python scripts/song_tfidf_calculation.py --num_songs {num_songs}",
-            f"python scripts/query_tfidf_calculation.py --num_songs {num_songs}"
-        ])
+    # will_exec_tfidf = will_exec_command(f"{num_songs}_songs/{SONG}_tf_idfs_per_file")
+    #
+    # if will_exec_tfidf:
+    #     commands.extend([
+    #         f"python scripts/song_tfidf_calculation.py --num_songs {num_songs}",
+    #         f"python scripts/query_tfidf_calculation.py --num_songs {num_songs}"
+    #     ])
 
     for min_tfidf in min_tfidfs:
-        commands.extend([
-            f"python scripts/tfidf_pitch_extraction.py --audio_type song --min_tfidf {min_tfidf} --num_songs {num_songs}",
-            f"python scripts/tfidf_pitch_extraction.py --audio_type query --min_tfidf {min_tfidf} --num_songs {num_songs}"
-        ])
+        # commands.extend([
+        #     f"python scripts/tfidf_pitch_extraction.py --audio_type song --min_tfidf {min_tfidf} --num_songs {num_songs}",
+        #     f"python scripts/tfidf_pitch_extraction.py --audio_type query --min_tfidf {min_tfidf} --num_songs {num_songs}"
+        # ])
 
         for matching_algorithm in matching_algorithms:
             commands.append(
