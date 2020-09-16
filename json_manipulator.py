@@ -157,7 +157,7 @@ def serialize_pitch_contour_segmentations(
         batches_count = ceil(audios_count / chunk_size)
         tasks = []
         start = 0
-        end = chunk_size
+        end = start + chunk_size
         for batch_id in range(first_file_id, first_file_id + batches_count):
             tasks.append(
                 (loader_function, structure_name, batch_id, start, end)
