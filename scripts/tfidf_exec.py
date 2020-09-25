@@ -118,7 +118,9 @@ def main():
                     f"python scripts/evaluation_metrics.py --metric {metric_type} --min_tfidf {min_tfidf} -ma {matching_algorithm}  --num_songs {num_songs}"
                 ])
 
-    for command in commands:
+    steps_count = len(commands)
+    for step, command in enumerate(commands, 1):
+        print(f"Step {step} / {steps_count}")
         print(command)
         returned = subprocess.run(command, shell=True)
         if returned.returncode != 0:
