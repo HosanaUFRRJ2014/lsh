@@ -183,7 +183,7 @@ def serialize_pitch_contour_segmentations(
 
         # Saves serialized filenames in a file, in order to process them in 
         # deserialization fase
-        file_of_filenames = f'{structure_name}_filenames'
+        file_of_filenames = f'{structure_name}/{structure_name}_filenames'
         dump_structure(
             structure=batches_filenames,
             structure_name=file_of_filenames,
@@ -203,9 +203,11 @@ def _deserialize_pitch_contour_segmentations(file_of_filenames, num_audios=None)
         exit(1)
 
     loaded_audios_count = 0
+    path = file_of_filenames.split('/')[0]
+    path = path + '/' if path else ""
     for filename in list_of_files:
         if loaded_audios_count < num_audios:
-            batch_pitch_contours = load_structure(structure_name=filename)
+            batch_pitch_contours = load_structure(structure_name=path+filename)
 
             # Workaround to ignore files without data
             batch_pitch_contours = list(filter(lambda contour: len(contour[1]) > 0, batch_pitch_contours))
@@ -220,7 +222,8 @@ def _deserialize_pitch_contour_segmentations(file_of_filenames, num_audios=None)
 
 
 def deserialize_songs_pitch_contour_segmentations(num_audios=None):
-    file_of_filenames = 'songs_pitch_contour_segmentations_filenames'
+    name = 'songs_pitch_contour_segmentations'
+    file_of_filenames = f'{name}/{name}_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
         file_of_filenames=file_of_filenames,
         num_audios=num_audios
@@ -230,7 +233,8 @@ def deserialize_songs_pitch_contour_segmentations(num_audios=None):
 
 def deserialize_queries_pitch_contour_segmentations(num_audios=None):
     num_audios = num_audios if num_audios else get_queries_count()
-    file_of_filenames = 'queries_pitch_contour_segmentations_filenames'
+    name = 'queries_pitch_contour_segmentations'
+    file_of_filenames = f'{name}/{name}_filenames'
     pitch_contour_segmentations = _deserialize_pitch_contour_segmentations(
         file_of_filenames=file_of_filenames,
         num_audios=num_audios
