@@ -35,6 +35,9 @@ def calculate_cosine_similarity(query_tfidfs, song_tfidfs, **kwargs):
     """
     Cosine Similarity (d1, d2) = Dot product(d1, d2) / ||d1|| * ||d2||
     """
+
+    # NOTE: this ignores songs longer size, and considers only the
+    # first query-length pitches
     dot_product = sum(p*q for p,q in zip(query_tfidfs, song_tfidfs))
 
     query_norm = np.sqrt( np.sum( np.square(query_tfidfs)))
@@ -430,15 +433,15 @@ def normalize_distance_to_similarity(queries_expected_songs_and_distances):
     Tries to "normalize" distance to similarity range [0-100].
     Bigger distances must result in the smaller similarities, and the
     other way around.
-    A base logarithm function y=log1/2(x) is able to define range [0-1],
-    where y=distance and x=similarity.
-    In order to have range [0-100], its need to divide x by 100:
-    y=log1/2(x/100) and x=100(1/2)^y.
+    Exponential function: f(x) = (e^(1/x)) - 1
+    f(x) = similarity
+    x = distance
     """
 
     similarities = {}
     for query_name, expected_song_name, distance in queries_expected_songs_and_distances:
-        similarities[query_name] = 100 * pow(0.5, distance)
-        print(f"{query_name} : distance={distance}\t\tsimilarity{similarities[query_name]}")
+        similarity = np.exp(1/distance) - 1
+        similarities[query_name] = 100.0 if similarity > 100 else similarity 
+        print(f"{query_name} : distance={distance}\tsimilarity={similarities[query_name]}")
 
     return similarities
