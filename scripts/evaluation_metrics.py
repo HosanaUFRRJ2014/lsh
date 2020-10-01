@@ -30,6 +30,7 @@ def process_args():
 
     default_num_songs = None # get_songs_count() + get_expanded_songs_count()
 
+
     parser.add_argument(
         "--num_songs",
         "-na",
@@ -66,7 +67,6 @@ def process_args():
         type=float,
         help=f"Gets the previous calculated  similarities for this minimum TF-IDF."
     )
-
     args = parser.parse_args()
 
     num_songs = args.num_songs

@@ -161,3 +161,6 @@ Executar passo a passo:
         python scripts/evaluation_metrics.py --metric ${METRIC_TYPE} --min_tfidf ${MIN_TFIDF} -ma ${MATCHING_ALGORITHIM}  --num_songs $NUM_SONGS
 
     
+
+### Gerar gráficos relacionando o MAE, RMSE aos min TF-IDF
+        python scripts/plot_errorbar.py --num_songs $NUM_SONGS --min_tfidf ${MIN_TFIDF_1} ${MIN_TFIDF_2} ${MIN_TFIDF_N} -ma ${MATCHING_ALGORITHIM_1} ${MATCHING_ALGORITHIM_2} ${MATCHING_ALGORITHIM_M}
