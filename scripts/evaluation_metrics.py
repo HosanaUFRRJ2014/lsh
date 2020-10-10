@@ -92,15 +92,17 @@ def mean_absolute_error(similarities, tfidf_similarities, square=False):
     if square:
         absolute_error = np.square(absolute_error)
     mae = np.mean(absolute_error)
+    mae_std = np.std(absolute_error)
+    mae_var = np.var(absolute_error)
 
-    return mae
+    return mae, mae_std, mae_var
 
 
 def root_mean_squared_error(similarities, tfidf_similarities):
     """
     Root Mean Squared Error (RMSE).
     """
-    mean_square_error = mean_absolute_error(
+    mean_square_error, _, _ = mean_absolute_error(
         similarities,
         tfidf_similarities,
         square=True
@@ -140,8 +142,7 @@ def main():
     evaluation_path = f"{num_songs}_songs/evaluations"
     dump_structure(
         structure=result,
-        structure_name=f"{evaluation_path}/{matching_algorithm}_{metric_type}_min_tfidf_{min_tfidf}",
-        extension="txt"
+        structure_name=f"{evaluation_path}/{matching_algorithm}_{metric_type}_min_tfidf_{min_tfidf}"
     )
 
 if __name__ == "__main__":

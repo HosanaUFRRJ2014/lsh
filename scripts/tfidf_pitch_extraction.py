@@ -117,9 +117,15 @@ def obtain_remaining_pitches(**kwargs):
     original_vector = kwargs.get("original_vector")
     min_tfidf = kwargs.get("min_tfidf")
 
-    # Rebuild the original portion of data of filtered pitches by tfidf
-    pitches_and_tfidfs = tfidfs.loc[filename]
     remaining_pitches = []
+    
+    # Rebuild the original portion of data of filtered pitches by tfidf
+    try:
+        pitches_and_tfidfs = tfidfs.loc[filename]
+    except:
+        print(f"filename {filename} has no tfidf value. Skipping")
+        return remaining_pitches
+        
     for pitch in original_vector:
         tfidf = pitches_and_tfidfs.get(pitch)
         if tfidf and tfidf > min_tfidf:
@@ -166,9 +172,9 @@ def extract_remaining_pitches(
 
         all_remaining_pitches[filename] = remaining_pitches
 
-        print("Original size:", original_length)
-        print("Remaining size:", remaining_length)
-        print("Percent:", percent, " %", "\n")
+        #print("Original size:", original_length)
+        #print("Remaining size:", remaining_length)
+        #print("Percent:", percent, " %", "\n")
 
     no_pitches_percent = (no_remaining_pitches_count/num_audios) * 100
 

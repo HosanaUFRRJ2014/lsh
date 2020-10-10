@@ -155,23 +155,31 @@ def calculate_tfidfs_full(num_songs, all_pitch_contour_segmentations):
         audio_tfs = calculate_pitches_counts(pitch_values)
         tfs_of_all_audios[filename] = audio_tfs
 
-    return calculate_tfidfs(idfs, tfs_of_all_audios)
+    return calculate_tfidfs(np.array(idfs), np.array(tfs_of_all_audios))
 
 
-def calculate_tfidfs(idfs, tfs_of_all_audios):
+def calculate_tfidfs(idfs, tfs_of_all_audios, use_pitches_as_string=False):
     """Inspired in Term-Frequency, Inverse-Document-Frequency (TFIDF).
 
+    Note: Args are expected in np.ndarray type.
     See more at:
     https://mungingdata.wordpress.com/2017/11/25/episode-1-using-tf-idf-to-identify-the-signal-from-the-noise/
     """
     # maps tf-idfs of all pitches in an audio for each audio
+
+    idfs = idfs.item()
+    tfs_of_all_audios = tfs_of_all_audios.item()
+
     tfidfs_per_audios = {}
     for filename, audio_tfs in tfs_of_all_audios.items():
         tfidf_audio = {}
         for pitch, pitch_tf in audio_tfs.items():
+            if use_pitches_as_string:
+                pitch = str(pitch)
             idf = idfs[pitch]
+            print(f"pitch_tf * idf = {pitch_tf} * {idf}")
             tfidf = pitch_tf * idf
-            tfidf_audio[pitch] = tfidf
+            tfidf_audio[float(pitch)] = tfidf
 
         tfidfs_per_audios[filename] = tfidf_audio
 
@@ -196,12 +204,7 @@ def extract_plotable_tfidfs(tfidfs, all_pitch_contour_segmentations, min_tfidf=0
     return values
 
 
-def main():
-    percentages = {}
-    num_songs, algorithm_step, save_tfidfs_graphic = process_args()
-
-    all_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_songs)
-
+def __load_array_of_pitch_values_and_filenames(all_pitch_contour_segmentations):
     filenames = []
     array_of_pitch_values = []
     for filename, pitch_values, _onset, _duration in all_pitch_contour_segmentations:
@@ -211,40 +214,69 @@ def main():
         filenames.append(filename)
         array_of_pitch_values.append(pitch_values)
 
-    if algorithm_step == TF:
-        tfs_of_all_audios = {}
-        for filename, pitch_values in zip(filenames, array_of_pitch_values):
-            audio_tfs = calculate_pitches_counts(pitch_values)
-            tfs_of_all_audios[filename] = audio_tfs
-        data_frame = pd.DataFrame.from_dict(tfs_of_all_audios, orient='index', dtype=np.float64)
-    elif algorithm_step == IDF:
+    return array_of_pitch_values, filenames
+
+
+def main():
+    percentages = {}
+    num_songs, algorithm_step, save_tfidfs_graphic = process_args()
+
+    structure_name = f"{num_songs}_songs/{SONG}_{TFIDF if algorithm_step == None else algorithm_step}s_per_file"
+
+
+    all_pitch_contour_segmentations = []
+    array_of_pitch_values = []
+    filenames = []
+    if algorithm_step == None or algorithm_step in [TF, IDF]:
+        all_pitch_contour_segmentations = deserialize_songs_pitch_contour_segmentations(num_songs)
+        array_of_pitch_values, filenames = __load_array_of_pitch_values_and_filenames(all_pitch_contour_segmentations)
+
+    if algorithm_step == IDF:
         idfs = calculate_inversed_pitches_values_occurrencies(
             num_songs,
             array_of_pitch_values
         )
-        data_frame = pd.DataFrame.from_dict(idfs, orient='index', dtype=np.float64)
+        # data_frame = pd.DataFrame.from_dict(idfs, orient='index', dtype=np.float64)
+
+        dump_structure(idfs, structure_name)
+    
+
+    elif algorithm_step == TF:
+        tfs_of_all_audios = {}
+        for filename, pitch_values in zip(filenames, array_of_pitch_values):
+            audio_tfs = calculate_pitches_counts(pitch_values)
+            tfs_of_all_audios[filename] = audio_tfs
+        # data_frame = pd.DataFrame.from_dict(tfs_of_all_audios, orient='index', dtype=np.float64)
+    
+        dump_structure(
+            tfs_of_all_audios,
+            structure_name=structure_name
+        )
     else:
         if algorithm_step == TFIDF:
             tfs = load_structure(
-                structure_name=f"{num_songs}_songs/{SONG}_{TF}s_per_file",
-                as_numpy=False,
-                as_pandas=True,
-                extension="pkl"
+                structure_name=f"{num_songs}_songs/{SONG}_{TF}s_per_file"
             )
             idfs = load_structure(
-                structure_name=f"{num_songs}_songs/{SONG}_{IDF}s_per_file",
-                as_numpy=False,
-                as_pandas=True,
-                extension="pkl"
+                structure_name=f"{num_songs}_songs/{SONG}_{IDF}s_per_file"
             )
-            tfidfs = calculate_tfidfs(idfs, tfs)
+            # tfs = tfs.to_dict(orient='index')
+            # idfs = idfs.to_dict()[0]
+            tfidfs = calculate_tfidfs(idfs, tfs, use_pitches_as_string=True)
         else:
+            # If algorithm_step is not informed, calculates in-memory TF-IDF
             tfidfs = calculate_tfidfs_full(
                 num_songs, all_pitch_contour_segmentations
             )
-            algorithm_step = TFIDF
-        data_frame = pd.DataFrame.from_dict(tfidfs, orient='index')
 
+        data_frame = pd.DataFrame.from_dict(tfidfs, orient='index')
+        dump_structure(
+            data_frame,
+            structure_name=structure_name,
+            as_numpy=False,
+            as_pandas=True,
+            extension="pkl"
+        )
 
     # if save_tfidfs_graphic:
     #     values = extract_plotable_tfidfs(
@@ -259,14 +291,8 @@ def main():
     #         title=f'{num_songs}_songs/TF-IDF in {num_songs} songs (min-tfidf>{min_tfidf})'
     #     )
 
-    structure_name = f"{num_songs}_songs/{SONG}_{algorithm_step}s_per_file"
-    dump_structure(
-        data_frame,
-        structure_name=structure_name,
-        as_numpy=False,
-        as_pandas=True,
-        extension="pkl"
-    )
+    
+
 
     # dump_structure(structure=data_frame, structure_name=f'{SONG}_tf_idfs_per_file')
 

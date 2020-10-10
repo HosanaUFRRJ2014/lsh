@@ -23,6 +23,7 @@ from constants import (
     LINEAR_SCALING,
     BALS,
     MATCHING_ALGORITHMS,
+    ABRREV_TO_VERBOSE_NAME,
     METRIC_TYPES,
     MAE,
     RMSE
@@ -92,52 +93,68 @@ def main():
     songs_count_path = f"{num_songs}_songs"
     path = f"{songs_count_path}/{evaluations_path}"
     min_tfidfs = np.array(min_tfidfs)
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=[10,10])
     plt.xlabel("Minimum TF-IDFs")
-    plt.ylabel("Mean Absolute Error (MAE)")
-    title = "MAE for pitch extractions below minimum TF-IDFs,\n for {} matching {}".format(
-        ", ".join(matching_algorithms),
-        p.plural("algorithm", len(matching_algorithms))
+
+    matching_algo_str = ", ".join([
+        ABRREV_TO_VERBOSE_NAME.get(m, m)
+        for m in matching_algorithms
+    ])
+    title = "MAE and RMSE for pitch extractions below minimum TF-IDFs\n for {} matching {} ({} songs)".format(
+        matching_algo_str,
+        p.plural("algorithm", len(matching_algorithms)),
+        num_songs
     )
+    
     plt.title(title)
 
     for ytick, matching_algorithm in enumerate(matching_algorithms):
         maes = []
+        maes_var = []
+        maes_std = []
         rmses = []
         for min_tfidf in min_tfidfs:
             mae_filename = f"{path}/{matching_algorithm}_mae_min_tfidf_{min_tfidf}"
             rmse_filename = f"{path}/{matching_algorithm}_rmse_min_tfidf_{min_tfidf}"
+            maes_var_filename = f"{path}/{matching_algorithm}_mae_var_min_tfidf_{min_tfidf}"
 
-            mae = load_structure(
-                mae_filename,
-                as_numpy=False,
-                as_pandas=False,
-                extension="txt"
+            mae, mae_std, mae_var = load_structure(
+                mae_filename
             )
             maes.append(mae)
+            maes_var.append(mae_var)
+            maes_std.append(mae_std)
 
             rmse = load_structure(
-                rmse_filename,
-                as_numpy=False,
-                as_pandas=False,
-                extension="txt"
+                rmse_filename
             )
             rmses.append(rmse)
         
+
         ax.errorbar(
             x=min_tfidfs,
             y=maes,
-            yerr=rmses,
+            yerr=maes_std,
             color=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][0],
-            ecolor=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][1],
             linestyle="dashdot",
             marker='o',
-            capsize=5,
-            label=matching_algorithm
+            capsize=7,
+            label=f"{matching_algorithm} - MAE"
+        )
+
+        ax.errorbar(
+            x=min_tfidfs,
+            y=rmses,
+            color=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][1],
+            ecolor=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][1],
+            linestyle="dashdot",
+            marker='^',
+            capsize=7,
+            label=f"{matching_algorithm} - RMSE"
         )
     
     ax.legend()
-    title = title.replace("\n", "")
+    ax.set_xticks(min_tfidfs)
     plt.savefig(f"{FILES_PATH}/{path}/{title}.png")
     plt.show()
 

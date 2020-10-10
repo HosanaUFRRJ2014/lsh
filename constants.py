@@ -103,6 +103,15 @@ MATCHING_ALGORITHMS = [
     KTRA
 ]
 
+ABRREV_TO_VERBOSE_NAME = {
+    JACCARD_SIMILARITY: "Jaccard Similarity",
+    COSINE_SIMILARITY: "Cosine Similarity",
+    RECURSIVE_ALIGNMENT: "Recursive Alignment",
+    KTRA: "Key-Transposition Recursive Alignment",
+    LINEAR_SCALING: "Linear Scaling",
+    BALS: "Boundary Alignment Linear Scaling"
+}
+
 # Shifting size
 BALS_SHIFT_SIZE = 15  # arbitrary value
 
