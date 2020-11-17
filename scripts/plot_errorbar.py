@@ -67,6 +67,13 @@ def process_args():
     )
 
     parser.add_argument(
+        "--metric",
+        "-me",
+        type=str,
+        choices=METRIC_TYPES
+    )
+
+    parser.add_argument(
         "--min_tfidf",
         "-min",
         type=float,
@@ -78,45 +85,66 @@ def process_args():
     num_songs = args.num_songs
     min_tfidfs = args.min_tfidf
     matching_algorithms = args.matching_algorithm
+    metric = args.metric
 
-    return num_songs, min_tfidfs, matching_algorithms
+    return num_songs, min_tfidfs, matching_algorithms, metric
 
 
 def main():
-    num_songs, min_tfidfs, matching_algorithms = process_args()
+    num_songs, min_tfidfs, matching_algorithms, metric = process_args()
 
+    matching_algo_count = len(matching_algorithms)
     p = inflect.engine()
 
     min_tfidfs.sort()
 
     evaluations_path = "evaluations"
     songs_count_path = f"{num_songs}_songs"
-    path = f"{songs_count_path}/{evaluations_path}"
+    data_path = f"{songs_count_path}/{evaluations_path}"
+    graphics_path = f"graphics/{songs_count_path}"
     min_tfidfs = np.array(min_tfidfs)
-    fig, ax = plt.subplots(figsize=[10,10])
-    plt.xlabel("Minimum TF-IDFs")
+    fig, axs = plt.subplots(
+        figsize=[10 * matching_algo_count, 10],
+        dpi=80,
+        nrows=1,
+        ncols=matching_algo_count,
+        # sharey='row',
+        tight_layout=True  # decreases padding size
+    )
+
+    if len(fig.axes) == 1:
+        axs = [axs]
 
     matching_algo_str = ", ".join([
         ABRREV_TO_VERBOSE_NAME.get(m, m)
         for m in matching_algorithms
     ])
-    title = "MAE and RMSE for pitch extractions below minimum TF-IDFs\n for {} matching {} ({} songs)".format(
+    title = "{} for pitch extractions below minimum TF-IDFs\n for {} matching {} ({} songs)".format(
+        metric.upper(),
         matching_algo_str,
-        p.plural("algorithm", len(matching_algorithms)),
+        p.plural("algorithm", matching_algo_count),
         num_songs
     )
-    
-    plt.title(title)
+    fig.suptitle(title)
 
-    for ytick, matching_algorithm in enumerate(matching_algorithms):
+    yticks = []
+    ytick_value = 0
+    MAX_Y = 15
+    for i in range(0, MAX_Y*2+1): 
+        yticks.append(ytick_value) 
+        ytick_value = ytick_value + 0.5
+
+    yticks = np.array(yticks)
+
+    for i, matching_algorithm in enumerate(matching_algorithms):
         maes = []
         maes_var = []
         maes_std = []
         rmses = []
         for min_tfidf in min_tfidfs:
-            mae_filename = f"{path}/{matching_algorithm}_mae_min_tfidf_{min_tfidf}"
-            rmse_filename = f"{path}/{matching_algorithm}_rmse_min_tfidf_{min_tfidf}"
-            maes_var_filename = f"{path}/{matching_algorithm}_mae_var_min_tfidf_{min_tfidf}"
+            mae_filename = f"{data_path}/{matching_algorithm}_mae_min_tfidf_{min_tfidf}"
+            rmse_filename = f"{data_path}/{matching_algorithm}_rmse_min_tfidf_{min_tfidf}"
+            maes_var_filename = f"{data_path}/{matching_algorithm}_mae_var_min_tfidf_{min_tfidf}"
 
             mae, mae_std, mae_var = load_structure(
                 mae_filename
@@ -131,32 +159,48 @@ def main():
             rmses.append(rmse)
         
 
-        ax.errorbar(
-            x=min_tfidfs,
-            y=maes,
-            yerr=maes_std,
-            color=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][0],
-            linestyle="dashdot",
-            marker='o',
-            capsize=7,
-            label=f"{matching_algorithm} - MAE"
-        )
+        if metric == MAE:
+            axs[i].errorbar(
+                x=min_tfidfs,
+                y=maes,
+                # yerr=maes_std,
+                color=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][0],
+                linestyle="dashdot",
+                marker='o',
+                capsize=7,
+                label=f"{matching_algorithm} - MAE"
+            )
 
-        ax.errorbar(
-            x=min_tfidfs,
-            y=rmses,
-            color=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][1],
-            ecolor=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][1],
-            linestyle="dashdot",
-            marker='^',
-            capsize=7,
-            label=f"{matching_algorithm} - RMSE"
+        if metric == RMSE:
+            axs[i].errorbar(
+                x=min_tfidfs,
+                y=rmses,
+                color=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][1],
+                ecolor=MATCHING_ALGORITHMS_TO_COLORS[matching_algorithm][1],
+                linestyle="dashdot",
+                marker='^',
+                capsize=7,
+                label=f"{matching_algorithm} - RMSE",
+            )
+        axs[i].set_ylim(
+            bottom=0
         )
-    
-    ax.legend()
-    ax.set_xticks(min_tfidfs)
-    plt.savefig(f"{FILES_PATH}/{path}/{title}.png")
-    plt.show()
+        axs[i].set_title(ABRREV_TO_VERBOSE_NAME[matching_algorithm])
+        axs[i].legend()
+        axs[i].set_xticks(min_tfidfs)
+        axs[i].set_yticks(yticks)
+        axs[i].tick_params(
+            axis='x',  # apply only for x-axis
+            labelrotation=35,
+            direction='inout',
+            length=5
+        )
+        axs[i].set_xlabel("Minimum TF-IDFs")
+
+
+    title = title.replace('\n', '')
+    plt.savefig(f"{graphics_path}/{title}.png")
+    # plt.show()
 
 
 if __name__ == "__main__":
