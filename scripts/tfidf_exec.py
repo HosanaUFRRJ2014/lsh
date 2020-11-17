@@ -153,9 +153,12 @@ def main():
 
     steps_count = len(commands)
     for step, command in enumerate(commands, 1):
-        print(f"Step {step} / {steps_count}")
+        print(
+            f"Step {step} / {steps_count};"
+        )
         print(command)
         returned = subprocess.run(command, shell=True)
+        print("{} % done.".format(round((step * 100)/steps_count, ndigits=2)))
         if returned.returncode != 0:
             print(command)
             exit(1)
