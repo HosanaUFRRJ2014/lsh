@@ -1,5 +1,5 @@
 # Includes the parent directory into sys.path, to make imports work
-import os.path, sys
+import os, os.path, sys
 sys.path.append(
     os.path.join(
         os.path.dirname(
@@ -90,6 +90,10 @@ def process_args():
     return num_songs, min_tfidfs, matching_algorithms, metric
 
 
+def create_path(graphics_path):
+    os.makedirs(graphics_path, exist_ok=True)
+
+
 def main():
     num_songs, min_tfidfs, matching_algorithms, metric = process_args()
 
@@ -102,13 +106,15 @@ def main():
     songs_count_path = f"{num_songs}_songs"
     data_path = f"{songs_count_path}/{evaluations_path}"
     graphics_path = f"graphics/{songs_count_path}"
+
+    create_path(graphics_path)
+
     min_tfidfs = np.array(min_tfidfs)
     fig, axs = plt.subplots(
         figsize=[10 * matching_algo_count, 10],
         dpi=80,
         nrows=1,
         ncols=matching_algo_count,
-        # sharey='col',
         tight_layout=True  # decreases padding size
     )
 
