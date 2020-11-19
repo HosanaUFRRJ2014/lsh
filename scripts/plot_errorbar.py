@@ -108,24 +108,9 @@ def main():
         dpi=80,
         nrows=1,
         ncols=matching_algo_count,
-        # sharey='row',
+        # sharey='col',
         tight_layout=True  # decreases padding size
     )
-
-    if len(fig.axes) == 1:
-        axs = [axs]
-
-    matching_algo_str = ", ".join([
-        ABRREV_TO_VERBOSE_NAME.get(m, m)
-        for m in matching_algorithms
-    ])
-    title = "{} for pitch extractions below minimum TF-IDFs\n for {} matching {} ({} songs)".format(
-        metric.upper(),
-        matching_algo_str,
-        p.plural("algorithm", matching_algo_count),
-        num_songs
-    )
-    fig.suptitle(title)
 
     yticks = []
     ytick_value = 0
@@ -135,6 +120,33 @@ def main():
         ytick_value = ytick_value + 0.5
 
     yticks = np.array(yticks)
+
+    if len(fig.axes) == 1:
+        axs = [axs]
+
+    matching_algo_str = ""
+    matching_algo_str = ", ".join([
+        ABRREV_TO_VERBOSE_NAME.get(m, m)
+        for m in matching_algorithms[:-1]
+    ])
+
+    if matching_algo_count > 1:
+        matching_algo_str += " and "
+
+    last_or_unique_ma = matching_algorithms[-1]
+    matching_algo_str += ABRREV_TO_VERBOSE_NAME.get(
+        last_or_unique_ma,
+        last_or_unique_ma
+    )
+
+    title = "{} for pitch extractions below minimum TF-IDFs\n for {} matching {} ({} songs)".format(
+        metric.upper(),
+        matching_algo_str,
+        p.plural("algorithm", matching_algo_count),
+        num_songs
+    )
+    fig.suptitle(title)
+
 
     for i, matching_algorithm in enumerate(matching_algorithms):
         maes = []
@@ -197,6 +209,14 @@ def main():
         )
         axs[i].set_xlabel("Minimum TF-IDFs")
 
+
+    # Workaround to remove y labels from second graphic onwards
+    # if matching_algo_count > 1:
+    #     for i in range(1, len(axs)):
+    #         axs[i].tick_params(
+    #             axis='y',
+    #             labelcolor='white'
+    #         )
 
     title = title.replace('\n', '')
     plt.savefig(f"{graphics_path}/{title}.png")
