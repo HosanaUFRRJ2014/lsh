@@ -51,6 +51,15 @@ def log_invalid_audio_type_error(audio_type):
     logging.error(message)
 
 
+def log_invalid_axes_number_error(axes_count, matching_algorithm_count):
+    message = " ".join([
+        f"{axes_count} axes number is invalid for {matching_algorithm_count}",
+        "matching algorithms. Try to inform the same number of axes of", 
+        "matching algorithms or use only one axe."
+    ])
+    logging.error(message)
+
+
 def log_invalid_index_type_error(index_types):
     message = ' '.join([
         f"'{index_types}' is(are) not (a) valid index(es) type(s).",
