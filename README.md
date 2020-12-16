@@ -163,4 +163,9 @@ Executar passo a passo:
     
 
 ### Gerar gráficos relacionando o MAE, RMSE aos min TF-IDF
-        python scripts/plot_errorbar.py --num_songs $NUM_SONGS --min_tfidf ${MIN_TFIDF_1} ${MIN_TFIDF_2} ${MIN_TFIDF_N} -ma ${MATCHING_ALGORITHIM_1} ${MATCHING_ALGORITHIM_2} ${MATCHING_ALGORITHIM_M}
+        python scripts/plot_errorbar.py --num_songs $NUM_SONGS --min_tfidf ${MIN_TFIDF_1} ${MIN_TFIDF_2} ${MIN_TFIDF_N} -ma ${MATCHING_ALGORITHIM_1} ${MATCHING_ALGORITHIM_2} ${MATCHING_ALGORITHIM_M} -me ${METRIC_TYPE}
+
+
+... ou simplesmente plote todos os gráficos de uma vez só
+        
+        python scripts/plot_all_exec.py
