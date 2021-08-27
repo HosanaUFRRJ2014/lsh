@@ -2,7 +2,7 @@
 
 ## Descrição
 
-Este repositório consiste na implementação de um Locality Sensitive Hashing por permutação,baseado no artigo [Minmax Circular Sector Arc for External Plagiarism’s Heuristic Retrieval stage](https://www.sciencedirect.com/science/article/abs/pii/S0950705117303696) porém aplicado à recuperação musical, baseado em [A query by humming system based on locality sensitive hashing indexes](https://www.researchgate.net/publication/256994076_A_query_by_humming_system_based_on_locality_sensitive_hashing_indexes).
+Este repositório consiste na implementação de um Locality Sensitive Hashing por permutação,baseado no artigo [Minmax Circular Sector Arc for External Plagiarism’s Heuristic Retrieval stage](https://www.sciencedirect.com/science/article/abs/pii/S0950705117303696) porém aplicado à recuperação musical, baseado em [A query by humming system based on locality sensitive hashing indexes](https://www.researchgate.net/publication/256994076_A_query_by_humming_system_based_on_locality_sensitive_hashing_indexes). A versão para buscar músicas por canto/solfejos **não está funcional**. Só é possível recuperar a própria canção dentro do dataset. Com isso, a nova proposta foi implementar a verificação de erro a partir da extração de informações abaixo de certo threshold de TF-IDF, também inspirado no artigo [Minmax Circular Sector Arc for External Plagiarism’s Heuristic Retrieval stage](https://www.sciencedirect.com/science/article/abs/pii/S0950705117303696) e apresentado nesse README.
 
 
 ## Árvore do diretório esperada:
