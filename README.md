@@ -85,6 +85,7 @@ Instalação das bibliotecas necessárias para a execução do algoritmo:
     python main.py serialize_pitches --serialize_options songs --serialize_options queries
     python main.py serialize_pitches --serialize_options expanded_songs
 
+**Nota:** a extração de segundos e de onsets não funcionou devidamente para o dataset de extensão. Os valores de segundos que a lib music21 não conseguiu encontrar foram substituídos por None.
 
 ### Cria índice PLSH:
     python main.py create_index -i plsh_index
