@@ -1,6 +1,21 @@
-
-\.vscode/\.ropeproject/config\.py
-
-\.vscode/\.ropeproject/objectdb
-
 __pycache__/
+
+generated_files/
+
+diagrama-TCC-v1\.jpg
+
+expected results
+
+\.vscode/
+
+\.idea/
+
+bin/
+
+lib/
+
+lib64
+
+pyvenv\.cfg
+
+share/

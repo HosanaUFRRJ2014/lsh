@@ -1,0 +1,86 @@
+Overview de A query by humming system based on locality sensitive hashing indexes(2012):
+Ideia Básica:
+A artigo apresenta um LSH por projeção baseado em nota (NLSH). Com esse LSH, é possível obter ganhos da continuidade do valor da nota, o que é bom contra a variação não-constante de tempo e cobre os problemas do LSH baseado em altura (PLSH). O NLSH é usado como primeiro nível de filtro. O PLSH é usado como segundo nível de filtro. Em ambos os filtros, é usado linear escalar (linear scaling - LSH), do tipo boundary alignment linear scaling (BALS) e key transposition recursive alignment (KTRA) para obter resultados rankeados. O LS mede a distância linear entre a query e candidatos e tirar fora os falsos candidatos. O alinhamento recursivo (recursive alignment - RA) é usado para lidar com o problema de alinhamento não-linear causada pela variação de tempo não-constante. Serve como tradeoff entre os alinhamentos global e local depois dos alinhamentos lineares. No final, é escolhido o BALS para limitar o conjunto de candidatos e o KTRA para rankear um conjunto pequeno de candidatos, dado que este é mais eficiente que o RA. O KTRA calcula a similaridade entre a query e os candidatos.
+
+Lista de técnicas usadas:
+- NLSH
+- PLSH
+- BALS
+- KTRA
+- LS
+
+Metodologia:
+O sistema proposto é dividido em duas partes:
+1) (Offline) Indexação das músicas (NLSH e PLSH)
+- Extração de notas dos arquivos MIDI
+- Indexação PLSH
+- Indexação NLSH
+
+Extração das notas dos arquivos MIDI:
+Features calculadas:
+
+ - volume
+ - balanço (balance)
+ - pronunciation rate
+ - mute rate
+ - total duration time
+ - pitch variance
+ - average intensity
+ - interval
+
+Features calculadas X features na essentia: (consulte essentia_features.txt)
+ - volume
+ - balance
+ - pronunciation rate
+ - mute rate 
+    -> lowlevel.silence_rate*
+      * Tem nas opções 20, 30 e 60 DB.
+      - Para cada uma dessas opções em decibeis, exite as opções, dmean, dmean2, dvar, dvar2, max, median, min, stdev, var 
+ - total duration time
+    -> len(audio)/44100.0 (aúdio carregado com EqloudLoader)
+ - pitch variance
+    -> lowlevel.pitch_salience.var ???
+ - average intensity
+    -> lowlevel.average_loudness ???
+ - interval
+
+A sequência de notas do arquivo MIDI é uma sequência de tuplas de tamanho dois, na qual a primeira posição é o valor da nota e t é a duração. Com o frame shift, as notas são convertidas numa sequência de tuplas de duas posições, na qual a primeira é o valor da nota e a segunda é o número de frames contínuos.
+
+Indexação PLSH:
+De um vetor de alturas (pitches) de uma dimensão, é escolhida uma janela de segundos e desta é extraída um ponto de pitch com alta dimensão (high-dimensional pitch point), com intervalo fixo dentro da janela. Depois, move-se a janela e o próximo ponto é extraído.
+É preciso construir um outro índice para gravar a posição dos vetores na melodia original, a fim de expandir os pontos vizinhos procurados para fragmentos candidatos na fase de recuperação (busca).
+
+Indexação NLSH:
+As pessoas não conseguem solfejar precisamente as notas, isto é, certamente solfejam com variações nas durações das notas. O índice NLSH ignora a duração das notas.
+Considerando apenas o valor da nota, um vetor de notas com dimensão fixa é extraido continuamente da sequência de notas. Como o pós processamento de pitch pode gerar inconsistências, tais como mergear várias notas em uma e separar uma única nota em vários pedaços, é preciso um método flexível para tolerar esses erros de segmentação de notas. Notas maiores que um limiar são divididas, enquanto que notas menores que outro limiar são unidas.
+De forma parecida com a outra indexação, também é preciso fazer um outro índice para gravar a localização dos vetores NLSH na melodia original.
+
+2) (Online) Busca dos trechos de solfejo
+- Extrair altura (pitch) do trecho de áudio
+- pós-processamento da altura
+- algoritmos de recuperação de backend
+
+Feature extraction de pitch dos trechos de query
+Aplicação de autocorrelação no rastreamento de pitch (pitch tracking) no qual o tamanho do frame é 64ms e o deslocamento de frame (frame shift) é 10ms.
+O contorno do pitch é suavisado com um filtro médio de tamanho 5. Isso é feito porque a altura da nota solfejada nem sempre está correta, além de poder ter vibrações não desejadas. Se o pitch tem valor zero, este é unido com o pitch anterior. Se o pitch é duas vezes o pitch correto ou a metade deste, é juntado ao pitch correto.
+Se uma variação de pitch entre frames adjacentes é menor que um limite estabelecido, todos os pitches são suavisados para o mesmo valor. Se a variação de pitch é maior que este limite, o frame é considerado com um ponto de corte.
+Uma vez que várias pessoas têm diferentes chaves de solfejo, isto pode ser tratado com subtração do meio (mean subtraction) [carece de mais informações a respeito], no qual todas as sequências de pitch e de sequências de notas extraídas da base de músicas e dos trechos de query, bem como os pontos de PLSH e NLSH são arrastados para o zero mean [média dos dados que pode ser calculada com a soma dos dados, dividida pela quantidade de dados].
+
+Features usadas:
+
+  - autocorrelação
+  - suavização (filtro tamanho 5)
+  - mean subtraction
+Recuperação baseado no índice PLSH
+Conversão dos pitches extraídos dos trechos de query para vetores PLSH com o mesmo método da construção do índice PLSH. A janela de extração é modificada de 0.6 para 1.7, dado que as pessoas sempre cantam num tempo diferente. São extraídos mais vetores PLSH e os vizinhos são procurados com o índice PLSH.
+Os fragmentos são as músicas candidatas com o tamanho proporcional ao do trecho de query. Os fragmentos estão no formato de um vetor de pitches.
+
+Recuperação baseada no índice NLSH
+o índice NLSH é usado na busca de vetores candidatos e estes são expandidos para fragmentos candidatos. Antes de extrair vetores NLSH, as notas longas são divididas em duas ou mais. Dessa forma, a recuração no NLSH é robusta para eliminar erros de notas longas e contra enganos de notas curtas unidas formando notas longas. A considerar a variação de tempo, a duração das notas foi ajustada. É valido lembrar que apenas o valor da nota é usado, ao invés da duração. Então os frames mais longos são modificados de 0.6l para 1.4l por 5 vezes para extrair mais pontos NLSH.
+
+Resultados:
+- Medida confiável (Confidence Measurement):
+Um cálculo é usado para medir a confiabilidade (C) do filtro 1 (PLSH).
+[Vide artigo página 2236]
+
+Trabalhos Futuros:

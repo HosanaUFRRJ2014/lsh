@@ -1,35 +1,124 @@
 # -*-coding:utf8;-*-
 from copy import copy
+from json import JSONEncoder
+from math import floor, ceil
 import numpy as np
-from random import sample, randint
-from scipy.sparse import lil_matrix
-from argparse import ArgumentParser
 
-d1 = "Hosana Gomes"
-d2 = "python é bom 1"
-d3 = "Estou com sono"
-d4 = "Vivo com bastante fome Hosana"
-d5 = "Hosana Gomes python"
+from constants import (
+    PLSH_INDEX,
+    NLSH_INDEX,
+    SELECTION_FUNCTIONS,
+    SELECTION_FUNCTION_COUNT
+)
+from json_manipulator import (
+    dump_structure,
+    load_structure,
+    NumpyArrayEncoder
+)
+from loader import load_expected_results
+from matching_algorithms import apply_matching_algorithm_to_lsh
+from messages import (
+    log_could_not_calculate_mrr_warning,
+    log_no_dumped_files_error
+)
 
+from utils import (
+    get_confidence_measurement,
+    print_confidence_measurements,
+    train_confidence,
+    unzip_pitch_contours
+)
 
-SELECTION_FUNCTIONS = [
-    min,
-    max
+__all__ = [
+    "create_indexes",
+    "exec_nlsh_pitch_extraction",
+    "exec_plsh_pitch_extraction",
+    "search_indexes"
 ]
-SELECTION_FUNCTION_COUNT = len(SELECTION_FUNCTIONS)
 
 
-def read_files():
-    pass
-
-
-def get_document_chunks(document):
+def exec_plsh_pitch_extraction(pitch_contour_segmentation, include_original_positions=False):
     '''
-    Split the document in chunks.
+    Splits the pitch vector into vectors, according to PLSH indexing.
     '''
-    if isinstance(document, list):
-        document = document[0]
-    return document.split(' ')
+    _, pitch_values, _, _ = pitch_contour_segmentation
+    original_positions = []
+    EXTRACTING_INTERVAL = 2
+    WINDOW_SHIFT = 15
+    WINDOW_LENGTH = 60
+    pitch_vectors = []
+    window_start = 0
+
+    number_of_windows = len(pitch_values) / (WINDOW_SHIFT)
+    number_of_windows = floor(number_of_windows)
+    # # positions_in_original_song = []
+    for window in range(number_of_windows):
+        window_end = window_start + WINDOW_LENGTH
+        pitch_vector = pitch_values[window_start:window_end:EXTRACTING_INTERVAL]
+        original_positions.append(window_start)
+        pitch_vectors.append(pitch_vector)
+        window_start += WINDOW_SHIFT
+
+    if include_original_positions:
+        return pitch_vectors, original_positions
+    else:
+        return pitch_vectors
+
+
+def exec_nlsh_pitch_extraction(
+    pitch_contour_segmentation, include_original_positions=False
+):
+    '''
+    Split the pitch vector into vectors, according to NLSH indexing.
+    If a note is longer than MAX_LENGHT_L, it's splited into one or more notes.
+    '''
+    _, pitch_values, onsets, durations = pitch_contour_segmentation
+    PITCHES_PER_SECOND = 25
+    WINDOW_SHIFT = 1 # 3   # in article: 1
+    WINDOW_LENGTH = 10
+    MAX_LENGHT_L = 10
+
+    original_positions = []
+    pitch_vectors = []
+    window_start = 0
+    calculate_note_shift = lambda duration: duration * PITCHES_PER_SECOND
+
+    # Splits notes greater than MAX_LENGHT_L
+    processed_pitch_values = []
+    get_pitch_index = lambda onset: int(onset * PITCHES_PER_SECOND)
+    for onset, duration in zip(onsets, durations):
+        processed_onsets = []
+        processed_durations = []
+        processed_onsets.append(onset)
+        if duration > MAX_LENGHT_L:
+            splited_duration = duration / MAX_LENGHT_L
+            number_of_splits = ceil(duration / MAX_LENGHT_L)
+            for i in range(1, number_of_splits + 1):
+                new_onset = onset + splited_duration * i
+                processed_onsets.append(new_onset)
+                processed_durations.append(splited_duration)
+        else:
+            processed_durations.append(duration)
+
+        for p_onset, _p_duration in zip(processed_onsets, processed_durations):
+            index = get_pitch_index(p_onset)
+            processed_pitch_values.append(pitch_values[index])
+
+    # Generate pitch vectors
+    window_start = 0
+    number_of_windows = len(pitch_values) / (WINDOW_SHIFT)
+    number_of_windows = floor(number_of_windows)
+    for pitch in range(number_of_windows):
+        window_end = window_start + WINDOW_LENGTH
+        pitch_vector = pitch_values[window_start:window_end]
+        original_positions.append(window_start)
+        pitch_vectors.append(pitch_vector)
+        window_start += WINDOW_SHIFT
+
+    if include_original_positions:
+        return pitch_vectors, original_positions
+    else:
+        return pitch_vectors
 
 
 def _get_index(permutation_number, selecion_function_code=0):
@@ -39,31 +128,82 @@ def _get_index(permutation_number, selecion_function_code=0):
     return permutation_number * (SELECTION_FUNCTION_COUNT) + selecion_function_code
 
 
-def vocab_index(term, v):
-    if term in v.keys():
-        return v[term]
-    else:
-        v[term] = len(v) + 1
-        return v[term]
+def _dump_piece(piece):
+    return ''.join(str(p) for p in piece)
 
 
-def tokenize(documents, v):
+def _vocab_index(piece, vocabulary, vocabulary_read_only):
+    # TODO: Does it need to take all the pitch vector to be the key?
+    dumped_piece = _dump_piece(piece)
+    if dumped_piece not in vocabulary.keys():
+        if not vocabulary_read_only:
+            vocabulary[dumped_piece] = len(vocabulary) + 1
+
+    return vocabulary.get(dumped_piece), dumped_piece
+
+
+def _audio_mapping_index(dumped_piece, audio_map, filename):
+    if dumped_piece not in audio_map.keys():
+        audio_map[dumped_piece] = np.array([])
+    audio_map[dumped_piece] = np.union1d(audio_map[dumped_piece], filename)
+    return audio_map
+
+
+def _original_position_index(dumped_piece, orig_pos_map, original_pos, filename):
+    '''
+    For a given filename, stores its dumped pieces and their original positions.
+    '''
+    if filename not in orig_pos_map.keys():
+        orig_pos_map[filename] = np.array([])
+    tuple_of_infos = (dumped_piece, original_pos)
+    orig_pos_map[filename] = np.union1d(orig_pos_map[filename], tuple_of_infos)
+
+    return orig_pos_map
+
+
+def tokenize(pitch_contour_segmentations, index_type, vocabulary={}):
+    vocabulary_read_only = True if vocabulary else False
+
+    audio_map = {}
+    orig_pos_map = {}
     td_matrix_temp = []
-    for i in range(len(documents)):
-        di_terms = []
-        document_chunks = get_document_chunks(documents[i])
-        for termj in document_chunks:
-            di_terms.append(vocab_index(termj, v))
-        td_matrix_temp.append(di_terms)
-        di_terms = None
-    td_matrix = np.zeros([len(v), len(documents)])
+    number_of_audios = len(pitch_contour_segmentations)
+    exec_pitch_extraction = {
+        PLSH_INDEX: exec_plsh_pitch_extraction,
+        NLSH_INDEX: exec_nlsh_pitch_extraction
+    }
+    for i in range(number_of_audios):
+        di_pieces = []
+        filename, _audio, _onsets, _durations = pitch_contour_segmentations[i]
 
-    for i in range(len(documents)):
-        td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
+        audio_chunks, original_positions = exec_pitch_extraction[index_type](
+            pitch_contour_segmentations[i],
+            include_original_positions=True
+        )
+
+        for audio_chunk_index, piecej in enumerate(audio_chunks):
+            index, dumped_piece = _vocab_index(piecej, vocabulary, vocabulary_read_only)
+            di_pieces.append(index)
+            # audio_map = _audio_mapping_index(dumped_piece, audio_map, filename)
+            # orig_pos_map = _original_position_index(
+            #     dumped_piece,
+            #     orig_pos_map,
+            #     audio_chunk_index,
+            #     filename
+            # )
+        td_matrix_temp.append(di_pieces)
+        di_pieces = None
+    td_matrix = np.zeros([len(vocabulary), number_of_audios])
+
+    for i in range(number_of_audios):
+        try:
+            td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1
+        except TypeError:
+            print("TypeError in td_matrix[np.array(td_matrix_temp[i]) - 1, i] = 1. Ignoring")
 
     del td_matrix_temp
     td_matrix_temp = None
-    return td_matrix
+    return td_matrix, vocabulary, audio_map, orig_pos_map
 
 
 def get_fingerprint(vocabulary):
@@ -82,39 +222,50 @@ def permutate(to_permute, shuffle_seed, fingerprints):
 def generate_inverted_index(td_matrix, permutation_count):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT  # + SELECTION_FUNCTION_COUNT
-    num_columns = td_matrix.shape[0] #+ 1
+    num_columns = td_matrix.shape[0]  # + 1
     inverted_index = np.zeros(
         (num_lines, num_columns),
         dtype=np.ndarray
     )
 
+    # Forma antiga de gerar os fingerprints
     fingerprints = np.array(range(1, num_columns + 1))
     for j in range(td_matrix.shape[1]):
+        # Forma nova de gerar os fingerprints
+        # fingerprints = np.array(range(1, len(np.nonzero(td_matrix[:, j])[0])+1))
         for i in range(permutation_count):
+            # my_array = td_matrix[:, j]
             dj_permutation = permutate(
                 to_permute=td_matrix[:, j],
+                # to_permute= my_array[np.nonzero(td_matrix[:, j])[0]],
                 shuffle_seed=i,
                 fingerprints=fingerprints
             )
+            non_zero_indexes = np.nonzero(dj_permutation)
             for l in range(SELECTION_FUNCTION_COUNT):
                 first_index = _get_index(
                     permutation_number=i,
                     selecion_function_code=l
                 )
-                non_zero_indexes = np.nonzero(dj_permutation)
-                second_index = int(
-                    SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
-                ) - 1
-                # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
-                if isinstance(inverted_index[first_index][second_index], np.ndarray):
-                    inverted_index[first_index][second_index] = np.append(
-                        inverted_index[first_index][second_index],
-                        [j + 1]
-                    )
-                else:
-                    inverted_index[first_index][second_index] = np.array([j + 1])
-                # print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
 
+                # TODO: Verify if I can ignore empties.
+                if non_zero_indexes[0].size > 0:
+                    second_index = int(
+                        SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
+                    ) - 1
+                   
+
+                    # print("(%d, %d) on (%d, %d)"%(first_index, second_index, num_lines, num_columns),dj_permutation[non_zero_indexes])
+                    print(f"inverted_index[{first_index}][{second_index}] = ",inverted_index[first_index][second_index])
+                    if isinstance(inverted_index[first_index][second_index], np.ndarray):
+                        inverted_index[first_index][second_index] = np.append(
+                            inverted_index[first_index][second_index],
+                            [j + 1]
+                        )
+                    else:
+                        inverted_index[first_index][second_index] = np.array([j + 1])
+                # print("\t \t %d ª funcao: (%s) -> indice_invertido[%d][%d].add(%d)"%(l+1,SELECTION_FUNCTIONS[l].__name__, first_index,second_index,j+1))
+                print(f"inverted_index[{first_index}][{second_index}]", inverted_index[first_index][second_index])
     return inverted_index
 
 
@@ -122,11 +273,12 @@ def search_inverted_index(
     query_td_matrix, inverted_index, permutation_count
 ):
     # num_lines = permutation_count * (SELECTION_FUNCTION_COUNT + 1) + SELECTION_FUNCTION_COUNT
-    similar_docs_count = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
+    candidates_count = np.zeros((inverted_index.shape[1] + 1, ), dtype=int)
     num_lines = permutation_count * SELECTION_FUNCTION_COUNT
-    num_columns = query_td_matrix.shape[0] # + 1
+    num_columns = query_td_matrix.shape[0]  # + 1
 
     fingerprints = np.array(range(1, num_columns + 1))
+    print("Fingerprints: ", fingerprints)
     for j in range(query_td_matrix.shape[1]):
         for i in range(permutation_count):
             dj_permutation = permutate(
@@ -134,105 +286,285 @@ def search_inverted_index(
                 shuffle_seed=i,
                 fingerprints=fingerprints
             )
+            non_zero_indexes = np.nonzero(dj_permutation)
             for l in range(SELECTION_FUNCTION_COUNT):
                 first_index = _get_index(
                     permutation_number=i,
                     selecion_function_code=l
                 )
-                non_zero_indexes = np.nonzero(dj_permutation)
-                second_index = int(
-                    SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
-                ) - 1
 
-                try:
-                    retrieved_documents = inverted_index[first_index][second_index]
-                    # print('retrieved_documents:', retrieved_documents)
-                    if not isinstance(retrieved_documents, int):
-                        similar_docs_count[retrieved_documents] += 1
-                    # print("retrieved documents for fingerprint %d : "%(second_index), retrieved_documents)
-                except IndexError as e:
-                    continue
-    return similar_docs_count
+                # TODO: Verify if I can ignore empties.
+                # Shouldn't I remove zero pitches at the reading moment, like ref [16]
+                # of the base article says?
+                if non_zero_indexes[0].size > 0:
+                    second_index = int(
+                        SELECTION_FUNCTIONS[l](dj_permutation[non_zero_indexes])
+                    ) - 1
 
-    non_zero_indexes = np.nonzero(suspicious)
-    suspicious = np.unique(suspicious[non_zero_indexes])
-    return suspicious
+                    try:
+                        retrieved_pitch_vector = inverted_index[first_index][second_index]
+                        print(f"inverted_index[{first_index}][{second_index}] = {retrieved_pitch_vector}")
+                        if isinstance(retrieved_pitch_vector, np.ndarray) or not retrieved_pitch_vector == 0:
+                            candidates_count[retrieved_pitch_vector] += 1
+                        # print("retrieved pitch vector for fingerprint %d : "%(second_index), retrieved_pitch_vector)
+                    except IndexError as e:
+                        print(' '.join([
+                            f'INFO: Tryed to access',
+                            f'inverted_index[{first_index}][{second_index}]',
+                            'but IndexError has ocurred. Ignoring exception.'
+                        ]))
+                        continue
+    return candidates_count
 
 
-def calculate_jaccard_similarity(query_document, similar_document):
+def calculate_mean_reciprocal_rank(all_queries_distances, results_mapping, show_top_x):
     '''
-    Jaccard Similarity algorithm in steps:
-    1. Get the shared members between both sets, i.e. intersection.
-    2. Get the members in both sets (shared and un-shared, i.e. union).
-    3. Divide the number of shared members found in (1) by the total number of
-       members found in (2).
-    4. Multiply the found number in (3) by 100.
+    Rank results found by apply_matching_algorithm_to_lsh and applies Mean Reciproval
+    Rank (MRR).
     '''
-    query_chunks = get_document_chunks(query_document)
-    similar_document_chunks = get_document_chunks(similar_document)
+    reciprocal_ranks = []
+    mean_reciprocal_rank = None
+    number_of_queries = len(all_queries_distances.keys())
+    for query_name, results in all_queries_distances.items():
+        # bounded_results = results[:show_top_x]
+        correct_result = results_mapping[query_name]
+        # TODO: É realmente sobre todo o dataset? Se não for, ver o que fazer
+        # quando o resultado não estiver no bounded_results
+        # 'results' is a list of tuples (song_name, distance)
+        candidates_names = [result[0] for result in results]
 
-    intersection = set(similar_document_chunks).intersection(query_chunks)
-    union = set(similar_document_chunks + query_chunks)
+        try:
+            correct_result_index = candidates_names.index(correct_result)
+            rank = correct_result_index + 1
+            reciprocal_rank = 1 / rank
+        except ValueError:
+            log_could_not_calculate_mrr_warning(query_name)
+            reciprocal_rank = None
+            exit(1)
 
-    jaccard_similarity = len(intersection) / len(union) * 100
+        reciprocal_ranks.append(reciprocal_rank)
 
-    return jaccard_similarity
+    if all(reciprocal_ranks):
+        mean_reciprocal_rank = sum(reciprocal_ranks) / number_of_queries
+
+    return mean_reciprocal_rank
 
 
-def calculate_jaccard_similarities(query_document, similar_docs_count, documents):
-    '''
-    Calculates jaccard similarity for all similar documents found in lsh search.
-    Return an ordered jaccard similarity dictionary from de most to the less
-    similar document.
-    '''
-    similar_docs_indexes = (np.nonzero(similar_docs_count)[0] - 1)
-    similar_documents = documents[similar_docs_indexes]
-    jaccard_similarities = {
-        doc_index + 1: calculate_jaccard_similarity(query_document, document)
-        for doc_index, document in zip(similar_docs_indexes, similar_documents)
-    }
-    jaccard_similarities = sorted(
-        jaccard_similarities.items(),
-        key=lambda sim: sim[1],
-        reverse=True
+def calculate_confidence_measurement(
+    results, show_top_x, is_training_data=False, results_mapping=None
+):
+    all_confidence_measurements_data = {}
+    for query_name, result in results.items():
+        query_confidence_measurements = []
+        bounded_result = result[:show_top_x]
+        for index, candidate_and_distance in enumerate(bounded_result):
+            candidate, distance = candidate_and_distance
+            denominator = [
+                _distance
+                for candidate_name, _distance in bounded_result
+            ]
+            denominator.pop(index)
+            confidence_measurement = (
+                (show_top_x - 1) * distance
+            ) / sum(denominator)
+            query_confidence_measurements.append(
+                (candidate, confidence_measurement)
+            )
+            # If it's not training data, only calculate confidence for the
+            # first result
+            if not is_training_data:
+                break
+        all_confidence_measurements_data[query_name] = query_confidence_measurements
+
+    if is_training_data:
+        train_confidence(all_confidence_measurements_data, results_mapping)
+
+    return all_confidence_measurements_data
+
+
+def clip_false_candidates(all_confidence_measurements_data):
+    """
+    The clip with the false first ranked candidate is put into the next filter.
+    """
+    removed_candidates = []
+    above_threshold_count = 0
+    candidate_confidence_measurement = [
+        data[0]
+        for data in list(
+            all_confidence_measurements_data.values()
+        )
+    ][0]
+
+    threshold = get_confidence_measurement()
+
+    measurement = candidate_confidence_measurement[-1]
+    if measurement > threshold:
+        above_threshold_count += 1
+    else:
+        removed_candidates.append(
+            candidate_confidence_measurement[0]
+        )
+
+    no_need_of_second_filter = above_threshold_count == len(
+        all_confidence_measurements_data
     )
-    return jaccard_similarities
+
+    return removed_candidates, no_need_of_second_filter
 
 
-def lsh(documents_list, query, num_permutations):
-    """     parser = ArgumentParser()
-    parser.add_argument(
-        "np",
-        type=int,
-        help="Number of permutations"
+def _create_index(pitch_contour_segmentations, index_type, num_permutations):
+    # Indexing
+    print('Tokenizing...')
+    td_matrix, vocabulary, audio_mapping, original_positions_mapping = tokenize(
+        pitch_contour_segmentations, index_type
     )
-    args = parser.parse_args()
-    NUM_OF_PERMUTATIONS = args.np """
-    NUM_OF_PERMUTATIONS = num_permutations
-    # NUM_OF_PERMUTATIONS = 4  # aumentar para testar com dataset maior
-    # documents = np.array([d1, d2, d3, d4, d5])
-    documents = np.array(documents_list)
-    vocabulary = {}
-    td_matrix = tokenize(documents, vocabulary)
-    # print(td_matrix)
-    # print(vocabulary)
+    print('Generating inverted index...')
+    inverted_index = generate_inverted_index(td_matrix, num_permutations)
 
-    inverted_index = generate_inverted_index(td_matrix, NUM_OF_PERMUTATIONS)
+    # Serializing indexes
+    index_type_name = f'inverted_{index_type}'
+    indexes_and_indexes_names = [
+        (inverted_index, index_type_name),
+        # (audio_mapping, 'audio_mapping'),
+        # (original_positions_mapping, 'original_positions_mapping')
+    ]
+    print(f'Saving {index_type_name} in file')
+    for index, index_name in indexes_and_indexes_names:
+        dump_structure(
+            index,
+            structure_name=index_name
+        )
 
-    # query = ['Hosana Gomes']
-    query = [query]
-    query_td_matrix = tokenize(query, vocabulary)
-    similar_docs_count = search_inverted_index(
-        query_td_matrix, inverted_index, NUM_OF_PERMUTATIONS
+    print(f'Saving vocabulary in file')
+    dump_structure(vocabulary, structure_name="vocabulary", cls=JSONEncoder)
+
+
+def create_indexes(pitch_contour_segmentations, index_types, num_permutations):
+    for index_type in index_types:
+        _create_index(pitch_contour_segmentations, index_type, num_permutations)
+
+
+def _search_index(
+    query_pitch_contour_segmentations,
+    inverted_index,
+    vocabulary,
+    songs_list,
+    index_type,
+    removed_candidates,
+    num_permutations
+):
+    query_td_matrix, _vocabulary, _query_audio_mapping, _query_positions_mapping = tokenize(
+        query_pitch_contour_segmentations, index_type, vocabulary=vocabulary
     )
-    jaccard_similarities = calculate_jaccard_similarities(
-        query, similar_docs_count, documents
+    candidates_count = search_inverted_index(
+        query_td_matrix, inverted_index, num_permutations
+    )
+    candidates_indexes = (np.nonzero(candidates_count)[0] - 1)
+    candidates = songs_list[candidates_indexes]
+
+    # Clip with the false first ranked candidates is put into the next filter.
+    if removed_candidates:
+        candidates = np.array([
+            candidate
+            for candidate in candidates
+            if candidate[0] not in removed_candidates
+        ])
+
+    return candidates
+
+
+def search_indexes(
+    query_pitch_contour_segmentations,
+    song_pitch_contour_segmentations,
+    index_types,
+    matching_algorithm,
+    use_ls,
+    show_top_x,
+    is_training_confidence,
+    num_permutations,
+    results_mapping=None
+):
+    # Recovering songs pitch vectors
+    song_pitch_vectors = unzip_pitch_contours(
+        song_pitch_contour_segmentations
     )
 
-    for doc_index, sim_percent in jaccard_similarities:
-        print('document {} is {}% similar'.format(doc_index, sim_percent))
-    print('jaccard_similarities: ', jaccard_similarities)
+    # Recovering query pitch vectors
+    query_pitch_vectors = unzip_pitch_contours(
+        query_pitch_contour_segmentations
+    )
+    results = None
+    removed_candidates = []
+    for index_type in index_types:
+        # Recovering dumped index
+        try:
+            original_positions_mapping = None
+            # inverted_index, audio_mapping, original_positions_mapping = (
+            #     load_structure(structure_name=index_name)
+            #     for index_name in [
+            #         f'inverted_{index_type}',
+            #         # 'audio_mapping',
+            #         # 'original_positions_mapping'
+            #     ]
+            # )
+            inverted_index_name = f'inverted_{index_type}'
+            inverted_index = load_structure(inverted_index_name)
+            vocabulary = load_structure('vocabulary', as_numpy=False)
+        except Exception as e:
+            log_no_dumped_files_error(e)
+            exit(1)
 
+        # Searching songs
+        candidates = _search_index(
+            query_pitch_contour_segmentations,
+            inverted_index=inverted_index,
+            vocabulary=vocabulary,
+            songs_list=song_pitch_vectors,
+            index_type=index_type,
+            removed_candidates=removed_candidates,
+            num_permutations=num_permutations
+        )
+        print('\tCandidates count: ', len(candidates))
+        # print('\tCandidates:')
+        candidates_names = [c[0] for c in candidates]
+        # for candidate_name in candidates_names:
+        query_name = query_pitch_contour_segmentations[0][0]
+        correct_result = results_mapping.get(query_name)
+        for position, name in enumerate(candidates_names, start=1):
+            print(f'\t\t{position}. ', name)
+        print('Query: ', query_name)
+        # is_in_list = correct_result in candidates_names
+        # print('Result: ', correct_result)
+        # print(f'({index_type}) Correct result in retrieved list? ', is_in_list)
+        # if is_in_list:
+        #    print('\tPosition: ', candidates_names.index(correct_result)+1)
+        # print('Exiting program...')
+        exit(0)
+        # print('Applying matching algorithm... (step 4/5)')
+        results = apply_matching_algorithm_to_lsh(
+            choosed_algorithm=matching_algorithm,
+            query=query_pitch_vectors,
+            candidates=candidates,
+            index_type=index_type,
+            original_positions_mapping=original_positions_mapping,
+            use_ls=use_ls
+        )
 
-# if __name__ == '__main__':
-#     lsh()
+        print('Calculating Confidence Measurement... (step 5/5)')
+        all_confidence_measurements_data = calculate_confidence_measurement(
+            results=results,
+            show_top_x=show_top_x,
+            is_training_data=is_training_confidence,
+            results_mapping=results_mapping
+        )
+
+        if not is_training_confidence:
+            print_confidence_measurements(all_confidence_measurements_data)
+            removed_candidates, all_passed = clip_false_candidates(
+                all_confidence_measurements_data
+            )
+            if all_passed or len(index_types) == 1:
+                print("There is no need of a second filter")
+                break
+
+    return results
